@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+    <h:head>
+        <title>Inicio</title>
+    </h:head>
+    <h:body style="background-color: #D0D3D4">
+        <h:outputStylesheet name="res.css" />
+        <br />
+        <br />
+        <br />
+        <p:graphicImage name="FRAGMENT.png" width="50%" style="margin-left: 25%" />
+        <h:form id="f1">
+            <p:growl id="mensajes"  showDetail="true" />
+            <p:panelGrid style="margin:0 auto; margin-top: 5%; box-shadow: 15px 15px 50px 0px rgba(0,0,0,0.75); border-radius: 40px; border-color: transparent">
+                <f:facet name="header" >
+                    <p:row >
+                        <p:column colspan="2" style="background-color: transparent; color: white; padding: 4%; border-color: transparent">
+                            <h:outputText value="Parámetros" />
+                        </p:column>
+                    </p:row>
+                </f:facet>
+                <p:row>
+                    <p:column>
+                        <h:outputText value="Número de consultas por sitio" />
+                    </p:column>
+                    <p:column>
+                        <p:inputNumber decimalPlaces="0" value="#{bd.obj.NConsultas}" />
+                    </p:column>
+                </p:row>
+                <p:row>
+                    <p:column>
+                        <h:outputText value="Número de sitios" />
+                    </p:column>
+                    <p:column>
+                        <p:inputNumber decimalPlaces="0" value="#{bd.obj.NSitios}" />
+                    </p:column>
+                </p:row>
+                <p:row>
+                    <p:column colspan="2" style="text-align: center">
+                        <p:commandButton value="Generar log" action="#{bd.sig()}" update="mensajes b"  />
+                    </p:column>
+                </p:row>
+                <p:row>
+                    <p:column colspan="2" style="text-aling: center">
+                        <p:commandButton ajax="false" value="Descargar log" style="margin-left: 34%" disabled="#{bd.listo}" id="b">
+                            <p:fileDownload value="#{arch.file}" />
+                        </p:commandButton>
+                    </p:column>
+                </p:row>
+            </p:panelGrid>
+        </h:form>
+        <p:ajaxStatus onstart="PF('statusDialog').show()" onsuccess="PF('statusDialog').hide()" />
+
+        <p:dialog widgetVar="statusDialog" modal="true" style="background-color: transparent; border: none; box-shadow: none" draggable="false" closable="false" resizable="false" showHeader="false">
+            <p:graphicImage name="pro.gif" />
+        </p:dialog>
+
+    </h:body>
+</html>
+
