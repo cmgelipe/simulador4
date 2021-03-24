@@ -2,8 +2,10 @@ package JBS;
 
 import Modelo.BD;
 import javax.enterprise.context.Dependent;
+import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.SessionScoped;
+import javax.faces.context.FacesContext;
 
 /**
  *
@@ -75,6 +77,7 @@ public class inicio {
         if (obj.conexionexterna()) {
             this.setBbotonfragmentar(true);
             this.setBdatosincorrectos(false);
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Conexión exitosa",""));
         } else {
             this.setBbotonfragmentar(false);
             this.setBdatosincorrectos(true);
