@@ -446,6 +446,8 @@ public class BD implements Serializable {
     }
 
     private String generarMongoDB() {
+        //aqui trabaja arturo
+        
         return "";
     }
 
