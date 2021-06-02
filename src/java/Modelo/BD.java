@@ -11,6 +11,7 @@ import java.sql.Types;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -38,7 +39,7 @@ public class BD implements Serializable {
     private String passbd = "";
     private List<SelectItem> tablas;
     private Tabla tabla = new Tabla();
-
+    
     public boolean conexionexterna() {
         boolean res = false;
 
@@ -77,13 +78,13 @@ public class BD implements Serializable {
         return res;
     }
 
-    public void generar() {
+    public void generar(String []arr) {
         if (this.TipoBD.compareTo("a") == 0) {
             cadena = generarMYSQL();
         } else if (this.TipoBD.compareTo("b") == 0 || this.TipoBD.compareTo("c") == 0) {
             cadena = generarPostgreSQL();
         } else if (this.TipoBD.compareTo("d") == 0) {
-            cadena = generarMongoDB();
+            cadena = generarMongoDB(arr);
         }
     }
 
@@ -331,7 +332,7 @@ public class BD implements Serializable {
     public void setTablas(List<SelectItem> tablas) {
         this.tablas = tablas;
     }
-
+    
     private String generarMYSQL() {
         String ret = "";
         try {
@@ -415,7 +416,7 @@ public class BD implements Serializable {
                                         ret += fecha() + pid + " Query\t" + operacion2 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "=" + atributoTipo.split(":")[0] + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
                                     } else if (operacion2.compareTo("DELETE") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion2 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
-                                    }
+                                    } 
                                 }
                                 break;
                             default:
@@ -423,7 +424,7 @@ public class BD implements Serializable {
                         }
                     }
                     /*if (!tabla.getNombre().isEmpty()) {
-                        ArrayList sr = acc.ejecutarConsulta("select count(*) from " + tabla.getNombre());
+                       /*ArrayList sr = acc.ejecutarConsulta("select count(*) from " + tabla.getNombre());
                         int s = ((Double) ((ArrayList) sr.get(0)).get(0)).intValue();
                         if (s > 0) {
                             for (int t = 0; t < nInsert; t++) {
@@ -456,15 +457,15 @@ public class BD implements Serializable {
         return "";
     }
 
-    private String generarMongoDB() {
+    private String generarMongoDB(String []arr) {
         String ret = "";
         try {
             accexternomongo = new AccesoDatosMG(dirbd, nombd, this.tabla.getNombre(), usubd, passbd);
             if (accexternomongo.conectar()) {
                 for (int j = 0; j < nSitios; j++) {
                     String ip = ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + ":" + ((int) (Math.random() * 90)) + "" + ((int) (Math.random() * 900));
-                    ret += fecha() + " I  NETWORK  [listener] connection accepted from " + ip + " #" + (j + 1) + " (1 connection now open)\n";
-                    ret += fecha() + " I  NETWORK  [conn" + (j + 1) + "] received client metadata from " + ip + " conn" + (j + 1) + ": { application: { name: \"MongoDB Shell\" }, driver: { name: \"MongoDB Internal Client\", version: \"4.2.6\" }, os: { type: \"Windows\", name: \"Microsoft Windows 10\", architecture: \"x86_64\", version: \"10.0 (build 19042)\" } }";
+                    ret += fecha() + " I  NETWORK  [listener] connection accepted from " + ip + " #" + (j + 1) + " (1 connection now open) \n";
+                    ret += fecha() + " I  NETWORK  [conn" + (j + 1) + "] received client metadata from " + ip + " conn" + (j + 1) + ": { application: { name: \"MongoDB Shell\" }, driver: { name: \"MongoDB Internal Client\", version: \"4.2.6\" }, os: { type: \"Windows\", name: \"Microsoft Windows 10\", architecture: \"x86_64\", version: \"10.0 (build 19042)\" } } \n";
                     ArrayList<String> atributos = new ArrayList<>();
                     for (int i = 0; i < (nConsultas); i++) {
                         atributos = accexternomongo.atributos(this.nombd, this.getTabla().getNombre());
@@ -493,9 +494,43 @@ public class BD implements Serializable {
                                 break;
                         }
                         System.out.println("Tamaño " + c_operador0.size());
-                        String[] c_operacion0 = {"find", "update", "deleteOne"};
+                       String [] c_operacion0=new String[4];
+                        String o="";
+                        for(String t:arr){
+                            o+=t;
+                        }
+                        if(o.contains("a")){
+                            c_operacion0[0] = "find";  
+                        }
+                        if(o.contains("b")){
+                            if(c_operacion0[0]==null){
+                                c_operacion0[0]= "update";
+                            }else{
+                                c_operacion0[1] = "update";
+                            }
+                        }                   
+                        if(o.contains("c")){
+                            if(c_operacion0[0]==null){
+                                c_operacion0[0]= "delete";
+                            }else if(c_operacion0[1]==null){
+                                c_operacion0[1]= "delete";
+                            }else{
+                                c_operacion0[2] = "delete";
+                            }
+                        }
+                      if(o.contains("d")){
+                            if(c_operacion0[0]==null){
+                                c_operacion0[0]= "insert";
+                            }else if(c_operacion0[1]==null){
+                                c_operacion0[1]= "insert";
+                            }else if (c_operacion0[2]==null){
+                                c_operacion0[2] = "insert";
+                            }else{
+                                c_operacion0[3] = "insert";
+                            }
+                        }
                         String operador0 = c_operador0.get((int) (Math.random() * c_operador0.size()));
-                        String operacion0 = c_operacion0[(int) (Math.random() * c_operacion0.length)];
+                        String operacion0 = c_operacion0[(int) (Math.random() * arr.length)];
                         MongoCollection<Document> colec = accexternomongo.getMongoClient().getDatabase(this.nombd).getCollection(this.getTabla().getNombre());
                         double res = (double) colec.countDocuments();
                         if (res > 0) {
@@ -565,36 +600,42 @@ public class BD implements Serializable {
                             if (operacion0.compareTo("find") == 0) {
                                 if(atributoDocInterno1!=null){
                                     ret += fecha() + " I  COMMAND [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + "."+atributoDocInterno1+": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"}\n";
+                                        + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + "."+atributoDocInterno1+": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"} \n";
                                     atributoDocInterno1=null;
                                 }else{
                                     ret += fecha() + " I  COMMAND [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + ": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"}\n";
+                                        + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + ": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"} \n";
                                 }
                                 
                             } else if (operacion0.compareTo("update") == 0) {
                                 if(atributoDocInterno1!=null && atributoDocInterno2!=null){
                                     ret += fecha() + " I  WRITE [conn" + (j + 1) + "] update " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + "."+atributoDocInterno1+": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0]+"." +atributoDocInterno2+ ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms\n";
+                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + "."+atributoDocInterno1+": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0]+"." +atributoDocInterno2+ ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms \n";
                                 }else if(atributoDocInterno1==null && atributoDocInterno2==null){
                                     ret += fecha() + " I  WRITE [conn" + (j + 1) + "] update " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0]+ ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms\n";
+                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0]+ ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms \n";
                                 }
                                 
-                            } else if (operacion0.compareTo("deleteOne") == 0) {
+                            } else if (operacion0.compareTo("delete") == 0) {
                                 if(atributoDocInterno1!=null){
                                     ret += fecha() + " I  WRITE [conn" + (j + 1) + "] remove " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] +"."+atributoDocInterno1 +": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms\n";
+                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] +"."+atributoDocInterno1 +": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms \n";
                                 }else{
                                     ret += fecha() + " I  WRITE [conn" + (j + 1) + "] remove " + nombd + "." + this.tabla.getNombre()
                                         + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms\n";
                                 }
                                 
+                            } else if(operacion0.compareTo("insert") == 0){
+                                    ret += fecha() + " I  WRITE [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre()+ ".insert ({"+ atributoTipo.split(":")[0] +": "+ valorString1 +" "+"})\n";
+                                    
+                                    }
+                                
+                                    
                             }
                         }
                     }
                 }
-            }
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -608,4 +649,7 @@ public class BD implements Serializable {
     private String generaNumero() {
         return "" + (int) (Math.random() * 25 + 1);
     }
+    
+
+   
 }

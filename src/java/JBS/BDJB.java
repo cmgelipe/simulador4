@@ -24,6 +24,7 @@ public class BDJB implements Serializable {
     private StreamedContent file;
     String cadenaArchivo = "";
     
+    
     public BDJB() {
         try {
             inicio objeto = (inicio) FacesContext.getCurrentInstance().getExternalContext().getSessionMap().get("bd");
@@ -50,5 +51,6 @@ public class BDJB implements Serializable {
     public StreamedContent getFile() {
         return file;
     }
+
 
 }

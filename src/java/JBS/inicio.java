@@ -19,12 +19,23 @@ public class inicio {
     private boolean bconfig = false;
     private boolean bbotonfragmentar = false;
     private boolean bdatosincorrectos = false;
+    private String arrOPERACIONES[];
     public inicio() {
     }
-    
     public void sig(){
-        obj.generar();
-        listo=false;
+            obj.generar(arrOPERACIONES);
+            listo=false;
+        }
+//        return "segunda.xhtml";
+    
+    public void sig2(){
+        obj.generar(arrOPERACIONES);
+        if(this.arrOPERACIONES[0] != null ){
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Log Generado",""));
+            listo=false;
+        }else{
+            listo=false;
+        }
 //        return "segunda.xhtml";
     }
     /**
@@ -117,5 +128,19 @@ public class inicio {
     }
     public void revisarDatos() {
         this.bdatosincorrectos = false;
+    }
+    
+    /**
+     * @return the arrOPERACIONES
+     */
+    public String[] getArrOPERACIONES() {
+        return arrOPERACIONES;
+    }
+
+    /**
+     * @param arrOPERACIONES the arrOPERACIONES to set
+     */
+    public void setArrOPERACIONES(String []arrOPERACIONES) {
+        this.arrOPERACIONES = arrOPERACIONES;
     }
 }
