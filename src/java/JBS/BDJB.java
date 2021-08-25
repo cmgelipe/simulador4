@@ -30,18 +30,20 @@ public class BDJB implements Serializable {
             inicio objeto = (inicio) FacesContext.getCurrentInstance().getExternalContext().getSessionMap().get("bd");
             cadenaArchivo = objeto.getObj().getCadena();
             String ruta = ((ServletContext) FacesContext.getCurrentInstance().getExternalContext().getContext()).getRealPath("/");
-            File f=new File(ruta+"resources/temṕ.log");
+            File f=new File(ruta+"resources\\temṕ.log");
+            System.out.println(ruta+"resources/temṕ.log");
             if(f.exists())
                 f.delete();
-            RandomAccessFile acc = new RandomAccessFile(ruta + "resources/temṕ.log", "rw");
+            RandomAccessFile acc = new RandomAccessFile(ruta + "resources\\temṕ.log", "rw");
             acc.writeBytes(cadenaArchivo);
-            InputStream stream = new FileInputStream(ruta + "resources/temṕ.log");//((ServletContext) FacesContext.getCurrentInstance().getExternalContext().getContext()).getResourceAsStream(f.getAbsolutePath());
+            InputStream stream = new FileInputStream(ruta + "resources\\temṕ.log");//((ServletContext) FacesContext.getCurrentInstance().getExternalContext().getContext()).getResourceAsStream(f.getAbsolutePath());
             file = new DefaultStreamedContent(stream, "text/plain", "log.log");
-            acc.close();
+            
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(BDJB.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
         } catch (IOException ex) {
-            Logger.getLogger(BDJB.class.getName()).log(Level.SEVERE, null, ex);
+            
+            ex.printStackTrace();
         }
     }
 

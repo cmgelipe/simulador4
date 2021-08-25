@@ -6,14 +6,14 @@ import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.SessionScoped;
 import javax.faces.context.FacesContext;
-
+import java.io.Serializable;
 /**
  *
  * @author felipe
  */
 @ManagedBean(name = "bd")
 @SessionScoped
-public class inicio {
+public class inicio implements Serializable {
     private BD obj = new BD();
     private boolean listo=true;
     private boolean bconfig = false;

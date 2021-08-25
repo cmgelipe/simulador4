@@ -5,11 +5,13 @@
  */
 package Modelo;
 
+import java.io.Serializable;
+
 /**
  *
  * @author pipe
  */
-public class Atributo {
+public class Atributo implements Serializable{
     private String nombre;
     private String tipo;
     private String tamanio;

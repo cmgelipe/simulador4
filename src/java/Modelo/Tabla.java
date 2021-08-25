@@ -1,5 +1,6 @@
 package Modelo;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import javax.faces.model.SelectItem;
@@ -8,7 +9,7 @@ import javax.faces.model.SelectItem;
  *
  * @author pipe
  */
-public class Tabla {
+public class Tabla implements Serializable {
     private String tipoFragment;
     private boolean CBIR=false;
     private String nombre;

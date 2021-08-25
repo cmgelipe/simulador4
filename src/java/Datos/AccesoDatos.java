@@ -39,10 +39,13 @@ public class AccesoDatos implements Serializable {
     public boolean conectar() throws Exception {
         boolean bRet = false;
         try {
+            System.out.println(sUrl+"-"+sUsr+"-"+sPwd);
             Class.forName("com.mysql.jdbc.Driver").newInstance();
             oConexion = DriverManager.getConnection(sUrl, sUsr, sPwd);
+            System.out.println(sUrl+"-"+sUsr+"-"+sPwd);
             bRet = true;
         } catch (SQLException e) {
+            e.printStackTrace();
             throw e;
         }
         return bRet;

@@ -11,6 +11,7 @@ import java.sql.Types;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -39,16 +40,18 @@ public class BD implements Serializable {
     private String passbd = "";
     private List<SelectItem> tablas;
     private Tabla tabla = new Tabla();
-    
+    private HashMap<String, String> NombreIp;
+
     public boolean conexionexterna() {
         boolean res = false;
 
         if (TipoBD.compareTo("a") == 0) {
             try {
                 accexternomysql = new AccesoDatos(dirbd, nombd, usubd, passbd);
-
+                System.out.println(res);
                 if (accexternomysql.conectar()) {
                     res = true;
+                    System.out.println(res);
                     accexternomysql.desconectar();
                 }
             } catch (Exception ex) {
@@ -78,11 +81,11 @@ public class BD implements Serializable {
         return res;
     }
 
-    public void generar(String []arr) {
+    public void generar(String[] arr) {
         if (this.TipoBD.compareTo("a") == 0) {
-            cadena = generarMYSQL();
+            cadena = generarMYSQL(arr);
         } else if (this.TipoBD.compareTo("b") == 0 || this.TipoBD.compareTo("c") == 0) {
-            cadena = generarPostgreSQL();
+            cadena = generarPostgreSQL(arr);
         } else if (this.TipoBD.compareTo("d") == 0) {
             cadena = generarMongoDB(arr);
         }
@@ -244,6 +247,7 @@ public class BD implements Serializable {
     public void onTablas() {
         try {
             if (conexionexterna()) {
+
                 if (TipoBD.compareTo("a") == 0) {
                     ArrayList<String> t = null;
                     if (this.accexternomysql.conectar()) {
@@ -332,8 +336,8 @@ public class BD implements Serializable {
     public void setTablas(List<SelectItem> tablas) {
         this.tablas = tablas;
     }
-    
-    private String generarMYSQL() {
+
+    private String generarMYSQL(String[] arr) {
         String ret = "";
         try {
             acc = new AccesoDatos(dirbd, nombd, usubd, passbd);
@@ -348,41 +352,54 @@ public class BD implements Serializable {
                     ret += fecha() + pid + " Query\tshow databases\n";
                     ret += fecha() + pid + " Query\tshow tables\n";
                     ret += fecha() + pid + " Field List\tAccount\n";
-                    //int divInsert = (int) (nConsultas / 3);
-                    //int nInsert = (int) (Math.random() * divInsert) + 1;
+                    /*int divInsert = (int) (nConsultas / 3);
+                    int nInsert = (int) (Math.random() * divInsert) + 1;*/
 
                     ArrayList<String> atributos = new ArrayList<>();
                     for (int i = 0; i < (nConsultas /*- nInsert*/); i++) {
-                        /*int numeroT = (int) (Math.random() * tablas.size());
-                        tabla = tablas.get(numeroT);*/
                         atributos = acc.atributos(this.tabla.getNombre());
                         int numeroA = (int) (Math.random() * atributos.size());
                         String atributoTipo = atributos.get(numeroA);
+                        ArrayList<String> c_operacion0 = new ArrayList<>();
+                        String o = "";
+                        for (String t : arr) {
+                            o += t;
+                        }
+                        if (o.contains("a")) {
+                            c_operacion0.add("select");
+                        }
+                        if (o.contains("b")) {
+                            c_operacion0.add("update");
+                        }
+                        if (o.contains("c")) {
+                            c_operacion0.add("delete");
+                        }
+                        if (o.contains("d")) {
+                            c_operacion0.add("insert");
+                        }
                         switch (this.transTipoDato(atributoTipo.split(":")[1])) {
                             case 0:
                                 String[] c_operador0 = {"!=", "="};
-                                String[] c_operacion0 = {"SELECT", "UPDATE", "DELETE"};
                                 String operador0 = c_operador0[(int) (Math.random() * c_operador0.length)];
-                                String operacion0 = c_operacion0[0/*(int) (Math.random() * c_operacion0.length)*/];
+                                String operacion0 = c_operacion0.get((int) (Math.random() * c_operacion0.size()));
                                 ArrayList c_tamanio0 = acc.ejecutarConsulta("select count(*) from " + tabla.getNombre());
                                 int tam0 = ((Double) ((ArrayList) c_tamanio0.get(0)).get(0)).intValue();
                                 if (tam0 > 0) {
                                     int ale = (int) (Math.random() * tam0);
                                     ArrayList c_valor = acc.ejecutarConsulta("SELECT " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " LIMIT " + ale + ",1;");
-                                    if (operacion0.compareTo("SELECT") == 0) {
+                                    if (operacion0.compareTo("select") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion0 + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
-                                    } else if (operacion0.compareTo("UPDATE") == 0) {
+                                    } else if (operacion0.compareTo("update") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion0 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "='" + generaCadena() + "' WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
-                                    } else if (operacion0.compareTo("DELETE") == 0) {
+                                    } else if (operacion0.compareTo("delete") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion0 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
                                     }
                                 }
                                 break;
                             case 1:
                                 String[] c_operador = {">", "<", "<=", ">=", "!=", "="};
-                                String[] c_operacion = {"SELECT", "UPDATE", "DELETE"};
                                 String operador = c_operador[(int) (Math.random() * c_operador.length)];
-                                String operacion = c_operacion[0/*(int) (Math.random() * c_operacion.length)*/];
+                                String operacion = c_operacion0.get((int) (Math.random() * c_operacion0.size()));
                                 ArrayList c_tamanio = acc.ejecutarConsulta("select count(*) from " + tabla.getNombre());
                                 int tam = ((Double) ((ArrayList) c_tamanio.get(0)).get(0)).intValue();
                                 if (tam > 0) {
@@ -391,32 +408,31 @@ public class BD implements Serializable {
                                     DecimalFormat formateador = new DecimalFormat("###############.##########");
                                     String v = "0";
                                     v = formateador.format((Double) ((ArrayList) c_valor.get(0)).get(0));
-                                    if (operacion.compareTo("SELECT") == 0) {
+                                    if (operacion.compareTo("select") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador + v + "\n";
-                                    } else if (operacion.compareTo("UPDATE") == 0) {
+                                    } else if (operacion.compareTo("update") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "=" + generaNumero() + " WHERE " + atributoTipo.split(":")[0] + operador + v + "\n";
-                                    } else if (operacion.compareTo("DELETE") == 0) {
+                                    } else if (operacion.compareTo("delete") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador + v + "\n";
                                     }
                                 }
                                 break;
                             case 2:
                                 String[] c_operador2 = {">", "<", "<=", ">=", "!=", "="};
-                                String[] c_operacion2 = {"SELECT", "UPDATE", "DELETE"};
                                 String operador2 = c_operador2[(int) (Math.random() * c_operador2.length)];
-                                String operacion2 = c_operacion2[0/*(int) (Math.random() * c_operacion2.length)*/];
+                                String operacion2 = c_operacion0.get((int) (Math.random() * c_operacion0.size()));
                                 ArrayList c_tamanio2 = acc.ejecutarConsulta("select count(*) from " + tabla.getNombre());
                                 int tam2 = ((Double) ((ArrayList) c_tamanio2.get(0)).get(0)).intValue();
                                 if (tam2 > 0) {
                                     int ale = (int) (Math.random() * tam2);
                                     ArrayList c_valor = acc.ejecutarConsulta("SELECT " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " LIMIT " + ale + ",1;");
-                                    if (operacion2.compareTo("SELECT") == 0) {
+                                    if (operacion2.compareTo("select") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion2 + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
-                                    } else if (operacion2.compareTo("UPDATE") == 0) {
+                                    } else if (operacion2.compareTo("update") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion2 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "=" + atributoTipo.split(":")[0] + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
-                                    } else if (operacion2.compareTo("DELETE") == 0) {
+                                    } else if (operacion2.compareTo("delete") == 0) {
                                         ret += fecha() + pid + " Query\t" + operacion2 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
-                                    } 
+                                    }
                                 }
                                 break;
                             default:
@@ -453,11 +469,134 @@ public class BD implements Serializable {
         return ret;
     }
 
-    private String generarPostgreSQL() {
-        return "";
+    private String generarPostgreSQL(String[] arr) {
+        String ret = "";
+        try {
+            accexternopost = new AccesoDatosPG(dirbd, nombd, usubd, passbd);
+            if (accexternopost.conectar()) {
+                for (int j = 0; j < nSitios; j++) {
+                    String pid = "[" + (int) ((Math.random() * 8001) + 1000) + "]";
+                    String ip = ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255));
+                    ret += pid + "-_-" + ip + "LOG:  conexion autorizada: usuario=" + this.usubd + " base de datos=" + this.nombd + " application_name=psql\n";
+                    
+                    ArrayList<String> atributos = new ArrayList<>();
+                    for (int i = 0; i < (nConsultas /*- nInsert*/); i++) {
+                        /*int numeroT = (int) (Math.random() * tablas.size());
+                        tabla = tablas.get(numeroT);*/
+                        atributos = accexternopost.atributos(this.nombd, this.tabla.getNombre());
+                        int numeroA = (int) (Math.random() * atributos.size());
+                        String atributoTipo = atributos.get(numeroA);
+                        ArrayList<String> c_operacion0 = new ArrayList<>();
+                        String o = "";
+                        for (String t : arr) {
+                            o += t;
+                        }
+                        if (o.contains("a")) {
+                            c_operacion0.add("select");
+                        }
+                        if (o.contains("b")) {
+                            c_operacion0.add("update");
+                        }
+                        if (o.contains("c")) {
+                            c_operacion0.add("delete");
+                        }
+                        if (o.contains("d")) {
+                            c_operacion0.add("insert");
+                        }
+                        
+                        switch (this.transTipoDato(atributoTipo.split(":")[1])) {
+                            case 0:
+                                String[] c_operador0 = {"!=", "="};
+                                String operador0 = c_operador0[(int) (Math.random() * c_operador0.length)];
+                                String operacion0 = c_operacion0.get((int) (Math.random() * c_operacion0.size()));
+                                ArrayList c_tamanio0 = accexternopost.ejecutarConsulta("select count(*) from " + tabla.getNombre());
+                                int tam0 = ((Double) ((ArrayList) c_tamanio0.get(0)).get(0)).intValue();
+                                if (tam0 > 0) {
+                                    int ale = (int) (Math.random() * tam0);
+                                    ArrayList c_valor = accexternopost.ejecutarConsulta("SELECT " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " LIMIT 1 OFFSET " + ale + ";");
+                                    if (operacion0.compareTo("select") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                    } else if (operacion0.compareTo("update") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "='" + generaCadena() + "' WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                    } else if (operacion0.compareTo("delete") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                    }
+                                }
+                                break;
+                            case 1:
+                                String[] c_operador = {">", "<", "<=", ">=", "!=", "="};
+                                String operador = c_operador[(int) (Math.random() * c_operador.length)];
+                                String operacion = c_operacion0.get((int) (Math.random() * c_operacion0.size()));
+                                ArrayList c_tamanio = accexternopost.ejecutarConsulta("select count(*) from " + tabla.getNombre());
+                                int tam = ((Double) ((ArrayList) c_tamanio.get(0)).get(0)).intValue();
+                                if (tam > 0) {
+                                    int ale = (int) (Math.random() * tam);
+                                    ArrayList c_valor = accexternopost.ejecutarConsulta("SELECT " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " LIMIT 1 OFFSET " + ale + ";");
+                                    DecimalFormat formateador = new DecimalFormat("###############.##########");
+                                    String v = "0";
+                                    v = formateador.format((Double) ((ArrayList) c_valor.get(0)).get(0));
+                                    if (operacion.compareTo("select") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador + v + "\n";
+                                    } else if (operacion.compareTo("update") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "=" + generaNumero() + " WHERE " + atributoTipo.split(":")[0] + operador + v + "\n";
+                                    } else if (operacion.compareTo("delete") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador + v + "\n";
+                                    }
+                                }
+                                break;
+                            case 2:
+                                String[] c_operador2 = {">", "<", "<=", ">=", "!=", "="};
+                                String operador2 = c_operador2[(int) (Math.random() * c_operador2.length)];
+                                String operacion2 = c_operacion0.get((int) (Math.random() * c_operacion0.size()));
+                                ArrayList c_tamanio2 = accexternopost.ejecutarConsulta("select count(*) from " + tabla.getNombre());
+                                int tam2 = ((Double) ((ArrayList) c_tamanio2.get(0)).get(0)).intValue();
+                                if (tam2 > 0) {
+                                    int ale = (int) (Math.random() * tam2);
+                                    ArrayList c_valor = accexternopost.ejecutarConsulta("SELECT " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " LIMIT 1 OFFSET " + ale + ";");
+                                    if (operacion2.compareTo("select") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                    } else if (operacion2.compareTo("update") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "=" + atributoTipo.split(":")[0] + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                    } else if (operacion2.compareTo("delete") == 0) {
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                    }
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    /*if (!tabla.getNombre().isEmpty()) {
+                       /*ArrayList sr = acc.ejecutarConsulta("select count(*) from " + tabla.getNombre());
+                        int s = ((Double) ((ArrayList) sr.get(0)).get(0)).intValue();
+                        if (s > 0) {
+                            for (int t = 0; t < nInsert; t++) {
+                                int ale = (int) (Math.random() * s);
+                                ArrayList result = acc.ejecutarConsulta("SELECT * FROM " + tabla + " LIMIT " + ale + ",1;");
+                                String valoresComa = "";
+                                for (int y = 0; y < ((ArrayList) result.get(0)).size(); y++) {
+                                    if (this.transTipoDato(atributos.get(y).split(":")[1]) == 0 || this.transTipoDato(atributos.get(y).split(":")[1]) == 2) {
+                                        valoresComa += "\""+((ArrayList) result.get(0)).get(y) + "\", ";
+                                    } else {
+                                        valoresComa += ((ArrayList) result.get(0)).get(y) + ", ";
+                                    }
+                                }
+                                valoresComa = valoresComa.substring(0, valoresComa.length() - 2);
+                                ret += fecha() + pid + " Query\tINSERT INTO " + tabla + " values(" + valoresComa + ")\n";
+                            }
+                        }
+                    }*/
+                    ret += pid + "-_-" + ip + "LOG:  desconexión: duración de sesión 0:53:22.385 usuario=" + this.usubd + " base=" + this.nombd + " host=" + this.dirbd + "\n";
+                }
+                accexternopost.desconectar();
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return ret;
     }
 
-    private String generarMongoDB(String []arr) {
+    private String generarMongoDB(String[] arr) {
         String ret = "";
         try {
             accexternomongo = new AccesoDatosMG(dirbd, nombd, this.tabla.getNombre(), usubd, passbd);
@@ -494,55 +633,37 @@ public class BD implements Serializable {
                                 break;
                         }
                         System.out.println("Tamaño " + c_operador0.size());
-                       String [] c_operacion0=new String[4];
-                        String o="";
-                        for(String t:arr){
-                            o+=t;
+                        ArrayList<String> c_operacion0 = new ArrayList<>();
+                        String o = "";
+                        for (String t : arr) {
+                            o += t;
                         }
-                        if(o.contains("a")){
-                            c_operacion0[0] = "find";  
+                        if (o.contains("a")) {
+                            c_operacion0.add("find");
                         }
-                        if(o.contains("b")){
-                            if(c_operacion0[0]==null){
-                                c_operacion0[0]= "update";
-                            }else{
-                                c_operacion0[1] = "update";
-                            }
-                        }                   
-                        if(o.contains("c")){
-                            if(c_operacion0[0]==null){
-                                c_operacion0[0]= "delete";
-                            }else if(c_operacion0[1]==null){
-                                c_operacion0[1]= "delete";
-                            }else{
-                                c_operacion0[2] = "delete";
-                            }
+                        if (o.contains("b")) {
+                            c_operacion0.add("update");
                         }
-                      if(o.contains("d")){
-                            if(c_operacion0[0]==null){
-                                c_operacion0[0]= "insert";
-                            }else if(c_operacion0[1]==null){
-                                c_operacion0[1]= "insert";
-                            }else if (c_operacion0[2]==null){
-                                c_operacion0[2] = "insert";
-                            }else{
-                                c_operacion0[3] = "insert";
-                            }
+                        if (o.contains("c")) {
+                            c_operacion0.add("delete");
+                        }
+                        if (o.contains("d")) {
+                            c_operacion0.add("insert");
                         }
                         String operador0 = c_operador0.get((int) (Math.random() * c_operador0.size()));
-                        String operacion0 = c_operacion0[(int) (Math.random() * arr.length)];
+                        String operacion0 = c_operacion0.get((int) (Math.random() * c_operacion0.size()));
                         MongoCollection<Document> colec = accexternomongo.getMongoClient().getDatabase(this.nombd).getCollection(this.getTabla().getNombre());
                         double res = (double) colec.countDocuments();
                         if (res > 0) {
                             int ale = 0;
                             ale = (int) (Math.random() * res);
-                            Document c_valor=colec.find().skip(ale).limit(1).first();
+                            Document c_valor = colec.find().skip(ale).limit(1).first();
                             ale = (int) (Math.random() * res);
-                            Document c_valor2=colec.find().skip(ale).limit(1).first();
+                            Document c_valor2 = colec.find().skip(ale).limit(1).first();
                             String valorString1 = "";
                             String valorString2 = "";
-                            String atributoDocInterno1=null;
-                            String atributoDocInterno2=null;
+                            String atributoDocInterno1 = null;
+                            String atributoDocInterno2 = null;
                             while (c_valor.get(atributoTipo.split(":")[0]) == null) {
                                 ale = (int) (Math.random() * res);
                                 c_valor = colec.find().skip(ale).limit(1).first();
@@ -558,84 +679,83 @@ public class BD implements Serializable {
                                 valorString1 = c_valor.getDouble(atributoTipo.split(":")[0]).toString();
                                 valorString2 = c_valor2.getDouble(atributoTipo.split(":")[0]).toString();
                             } else if (atributoTipo.split(":")[1].toUpperCase().compareTo("ARRAY") == 0) {
-                                String varray=c_valor.get(atributoTipo.split(":")[0]).toString();
-                                varray=varray.replace("]", "");
-                                varray=varray.replace("[", "");
-                                varray=varray.replace("[{", "");
-                                varray=varray.replace("}]", "");
-                                varray=varray.replace("{", "");
-                                varray=varray.replace("}", "");
-                                varray=varray.replace("}", "");
-                                System.out.println("ARRAY: "+varray);
-                                if(varray.contains(":")){
-                                    int nValoresInternos=0;
-                                    for(int u=0;u<varray.length();u++){
-                                        if(varray.charAt(u)==':'){
+                                String varray = c_valor.get(atributoTipo.split(":")[0]).toString();
+                                varray = varray.replace("]", "");
+                                varray = varray.replace("[", "");
+                                varray = varray.replace("[{", "");
+                                varray = varray.replace("}]", "");
+                                varray = varray.replace("{", "");
+                                varray = varray.replace("}", "");
+                                varray = varray.replace("}", "");
+                                System.out.println("ARRAY: " + varray);
+                                if (varray.contains(":")) {
+                                    int nValoresInternos = 0;
+                                    for (int u = 0; u < varray.length(); u++) {
+                                        if (varray.charAt(u) == ':') {
                                             nValoresInternos++;
                                         }
                                     }
                                     nValoresInternos++;
-                                    String [] arraydearray=varray.split(",");
-                                    String linea=arraydearray[(int)(Math.random() * nValoresInternos)];
+                                    String[] arraydearray = varray.split(",");
+                                    String linea = arraydearray[(int) (Math.random() * nValoresInternos)];
                                     System.out.println(linea);
-                                    String []atributovalor=linea.split(":");
-                                    atributoDocInterno1=atributovalor[0];
-                                    valorString1=atributovalor[1];
-                                    linea=arraydearray[(int)(Math.random() * nValoresInternos)];
+                                    String[] atributovalor = linea.split(":");
+                                    atributoDocInterno1 = atributovalor[0];
+                                    valorString1 = atributovalor[1];
+                                    linea = arraydearray[(int) (Math.random() * nValoresInternos)];
                                     System.out.println(linea);
-                                    atributovalor=linea.split(":");
-                                    atributoDocInterno2=atributovalor[0];
-                                    valorString2=atributovalor[1];
-                                }else{
-                                    varray=varray.replace("[", "");
-                                    varray=varray.replace("]", "");
-                                    String []valores=varray.split(",");
-                                    valorString1=valores[(int)Math.random()*valores.length];
-                                    valorString2=valores[(int)Math.random()*valores.length];
-                                }   
+                                    atributovalor = linea.split(":");
+                                    atributoDocInterno2 = atributovalor[0];
+                                    valorString2 = atributovalor[1];
+                                } else {
+                                    varray = varray.replace("[", "");
+                                    varray = varray.replace("]", "");
+                                    String[] valores = varray.split(",");
+                                    valorString1 = valores[(int) Math.random() * valores.length];
+                                    valorString2 = valores[(int) Math.random() * valores.length];
+                                }
                             } else {
                                 valorString1 = c_valor.getString(atributoTipo.split(":")[0]);
                                 valorString2 = c_valor2.getString(atributoTipo.split(":")[0]);
                             }
                             if (operacion0.compareTo("find") == 0) {
-                                if(atributoDocInterno1!=null){
+                                if (atributoDocInterno1 != null) {
                                     ret += fecha() + " I  COMMAND [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + "."+atributoDocInterno1+": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"} \n";
-                                    atributoDocInterno1=null;
-                                }else{
+                                            + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + "." + atributoDocInterno1 + ": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"} \n";
+                                    atributoDocInterno1 = null;
+                                } else {
                                     ret += fecha() + " I  COMMAND [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + ": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"} \n";
+                                            + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + ": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"} \n";
                                 }
-                                
+
                             } else if (operacion0.compareTo("update") == 0) {
-                                if(atributoDocInterno1!=null && atributoDocInterno2!=null){
+                                if (atributoDocInterno1 != null && atributoDocInterno2 != null) {
                                     ret += fecha() + " I  WRITE [conn" + (j + 1) + "] update " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + "."+atributoDocInterno1+": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0]+"." +atributoDocInterno2+ ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms \n";
-                                }else if(atributoDocInterno1==null && atributoDocInterno2==null){
+                                            + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + "." + atributoDocInterno1 + ": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0] + "." + atributoDocInterno2 + ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms \n";
+                                } else if (atributoDocInterno1 == null && atributoDocInterno2 == null) {
                                     ret += fecha() + " I  WRITE [conn" + (j + 1) + "] update " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0]+ ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms \n";
+                                            + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0] + ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms \n";
                                 }
-                                
+
                             } else if (operacion0.compareTo("delete") == 0) {
-                                if(atributoDocInterno1!=null){
+                                if (atributoDocInterno1 != null) {
                                     ret += fecha() + " I  WRITE [conn" + (j + 1) + "] remove " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] +"."+atributoDocInterno1 +": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms \n";
-                                }else{
+                                            + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + "." + atributoDocInterno1 + ": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms \n";
+                                } else {
                                     ret += fecha() + " I  WRITE [conn" + (j + 1) + "] remove " + nombd + "." + this.tabla.getNombre()
-                                        + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms\n";
+                                            + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms\n";
                                 }
-                                
-                            } else if(operacion0.compareTo("insert") == 0){
-                                    ret += fecha() + " I  WRITE [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre()+ ".insert ({"+ atributoTipo.split(":")[0] +": "+ valorString1 +" "+"})\n";
-                                    
-                                    }
-                                
-                                    
+
+                            } else if (operacion0.compareTo("insert") == 0) {
+                                ret += fecha() + " I  WRITE [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre() + ".insert ({" + atributoTipo.split(":")[0] + ": " + valorString1 + " " + "})\n";
+
                             }
+
                         }
                     }
                 }
-            
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -649,7 +769,5 @@ public class BD implements Serializable {
     private String generaNumero() {
         return "" + (int) (Math.random() * 25 + 1);
     }
-    
 
-   
 }
