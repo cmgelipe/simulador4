@@ -11,12 +11,15 @@ import java.sql.Types;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.faces.model.SelectItem;
 import org.bson.Document;
 
@@ -603,11 +606,11 @@ public class BD implements Serializable {
             if (accexternomongo.conectar()) {
                 for (int j = 0; j < nSitios; j++) {
                     String ip = ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + ":" + ((int) (Math.random() * 90)) + "" + ((int) (Math.random() * 900));
-                    ret += fecha() + " I  NETWORK  [listener] connection accepted from " + ip + " #" + (j + 1) + " (1 connection now open) \n";
-                    ret += fecha() + " I  NETWORK  [conn" + (j + 1) + "] received client metadata from " + ip + " conn" + (j + 1) + ": { application: { name: \"MongoDB Shell\" }, driver: { name: \"MongoDB Internal Client\", version: \"4.2.6\" }, os: { type: \"Windows\", name: \"Microsoft Windows 10\", architecture: \"x86_64\", version: \"10.0 (build 19042)\" } } \n";
+                    String pid = ""+(int) ((Math.random() * 8001) + 1000);
                     ArrayList<String> atributos = new ArrayList<>();
                     for (int i = 0; i < (nConsultas); i++) {
                         atributos = accexternomongo.atributos(this.nombd, this.getTabla().getNombre());
+                        String projection=atributosProjectionMongoDB(atributos);
                         int numeroA = (int) (Math.random() * atributos.size());
                         String atributoTipo = atributos.get(numeroA);
                         ArrayList<String> c_operador0 = new ArrayList<>();
@@ -720,35 +723,91 @@ public class BD implements Serializable {
                             }
                             if (operacion0.compareTo("find") == 0) {
                                 if (atributoDocInterno1 != null) {
-                                    ret += fecha() + " I  COMMAND [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre()
-                                            + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + "." + atributoDocInterno1 + ": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"} \n";
+                                    ret += "{\"t\":{\"$date\":\""+ fecha().trim() +"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                                            +", \"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                                            +nombd + "." + this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"find\":\""
+                                            +this.tabla.getNombre()+"\",\"filter\":{\"" + atributoTipo.split(":")[0] + "." + atributoDocInterno1 + "\": {" + operador0 + ":\"" + valorString1 
+                                            + "\"} },\"projection\":{"+projection+"},\"lsid\":{\"id\":{\"$uuid\":\"60e637fc-f267-4840-993c-a3be0d6851ea\"}},\"$db\":\""
+                                            +this.nombd+"\"},\"planSummary\":\"COLLSCAN\",\"keysExamined\":0,\"docsExamined\":77,\"cursorExhausted\":true,\"numYields\":0,\"nreturned\":"
+                                            + "1870,\"queryHash\":\"4C06B3EF\",\"planCacheKey\":\"4FDA4125\",\"reslen\":2882,\"locks\":{\"Global\":{\"acquireCount\":{\"r\":1}},\"Mutex\":"
+                                            + "{\"acquireCount\":{\"r\":1}}},\"storage\":{\"data\":{\"bytesRead\":27422,\"timeReadingMicros\":105}},\"remote\":"
+                                            + "\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":36}}\n";
                                     atributoDocInterno1 = null;
                                 } else {
-                                    ret += fecha() + " I  COMMAND [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre()
-                                            + "appName: \"MongoDB Shell\" command: find { find: \"" + this.tabla.getNombre() + "\", filter: { " + atributoTipo.split(":")[0] + ": {" + operador0 + ":" + valorString1 + "} }, lsid: { id: UUID(\"73bfc0b6-e8de-4504-89d7-7636bfe18ecf\") }, $db: \"" + this.nombd + "\"} \n";
+                                    ret += "{\"t\":{\"$date\":\""+ fecha().trim() +"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                                            +", \"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                                            +nombd + "." + this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"find\":\""
+                                            +this.tabla.getNombre()+"\",\"filter\":{\"" + atributoTipo.split(":")[0] + "\": {" + operador0 + ":\"" + valorString1 
+                                            + "\"} },\"projection\":{"+projection+"},\"lsid\":{\"id\":{\"$uuid\":\"60e637fc-f267-4840-993c-a3be0d6851ea\"}},\"$db\":\""
+                                            +this.nombd+"\"},\"planSummary\":\"COLLSCAN\",\"keysExamined\":0,\"docsExamined\":77,\"cursorExhausted\":true,\"numYields\":0,\"nreturned\":"
+                                            + "1870,\"queryHash\":\"4C06B3EF\",\"planCacheKey\":\"4FDA4125\",\"reslen\":2882,\"locks\":{\"Global\":{\"acquireCount\":{\"r\":1}},\"Mutex\":"
+                                            + "{\"acquireCount\":{\"r\":1}}},\"storage\":{\"data\":{\"bytesRead\":27422,\"timeReadingMicros\":105}},\"remote\":"
+                                            + "\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":36}}\n";
                                 }
 
                             } else if (operacion0.compareTo("update") == 0) {
                                 if (atributoDocInterno1 != null && atributoDocInterno2 != null) {
-                                    ret += fecha() + " I  WRITE [conn" + (j + 1) + "] update " + nombd + "." + this.tabla.getNombre()
-                                            + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + "." + atributoDocInterno1 + ": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0] + "." + atributoDocInterno2 + ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms \n";
+                                    ret+="{\"t\":{\"$date\":\""+fecha().trim()+"\"},\"s\":\"I\",\"c\":\"COMMAND\",\"id\":"+pid
+                                          +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                                          +nombd + "." + this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"update\":\""
+                                          +this.tabla.getNombre()+"\",\"updates\":[{\"q\":{\""+atributoTipo.split(":")[0]+"." + atributoDocInterno1 
+                                          +"\":{"+operador0+":\""+valorString1+"\"}},\"u\":{\"$set\":{\""+ atributoTipo.split(":")[0] + "." + atributoDocInterno2 +"\":\""
+                                          +valorString2+"\"}},\"multi\":true}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
+                                          + "\"$db\":\""+nombd+"\"},\"numYields\":1,\"reslen\":60,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
+                                          + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":3}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":2}},\"Database\":"
+                                          + "{\"acquireCount\":{\"w\":2}},\"Collection\":{\"acquireCount\":{\"w\":2}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
+                                          + "{\"acquireCount\":2,\"timeAcquiringMicros\":6},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
+                                          + "\"durationMillis\":28}}\n";
                                 } else if (atributoDocInterno1 == null && atributoDocInterno2 == null) {
-                                    ret += fecha() + " I  WRITE [conn" + (j + 1) + "] update " + nombd + "." + this.tabla.getNombre()
-                                            + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, u:{ $set: {" + atributoTipo.split(":")[0] + ": " + valorString2 + " } }, multi: false, upsert: false } planSummary: COLLSCAN keysExamined:0 docsExamined:10 nMatched:1 nModified:0 numYields:0 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 1 } }, ReplicationStateTransition: { acquireCount: { w: 1 } }, Global: { acquireCount: { w: 1 } }, Database: { acquireCount: { w: 1 } }, Collection: { acquireCount: { w: 1 } }, Mutex: { acquireCount: { r: 1 } } } flowControl:{ acquireCount: 1, timeAcquiringMicros: 1 } storage:{} 31ms \n";
+                                    ret+="{\"t\":{\"$date\":\""+fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                                          +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                                          +nombd + "." + this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"update\":\""
+                                          +this.tabla.getNombre()+"\",\"updates\":[{\"q\":{\""+atributoTipo.split(":")[0] 
+                                          +"\":{"+operador0+":\""+valorString1+"\"}},\"u\":{\"$set\":{\""+ atributoTipo.split(":")[0] +"\":\""
+                                          +valorString2+"\"}},\"multi\":true}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
+                                          + "\"$db\":\""+nombd+"\"},\"numYields\":1,\"reslen\":60,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
+                                          + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":3}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":2}},\"Database\":"
+                                          + "{\"acquireCount\":{\"w\":2}},\"Collection\":{\"acquireCount\":{\"w\":2}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
+                                          + "{\"acquireCount\":2,\"timeAcquiringMicros\":6},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
+                                          + "\"durationMillis\":28}}\n";
                                 }
 
                             } else if (operacion0.compareTo("delete") == 0) {
                                 if (atributoDocInterno1 != null) {
-                                    ret += fecha() + " I  WRITE [conn" + (j + 1) + "] remove " + nombd + "." + this.tabla.getNombre()
-                                            + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + "." + atributoDocInterno1 + ": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms \n";
+                                    ret += "{\"t\":{\"$date\":\""+fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                                            +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                                            +nombd + "." + this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"delete\":\""
+                                            +this.tabla.getNombre()+"\",\"deletes\":[{\"q\":{\""+atributoTipo.split(":")[0] + "." + atributoDocInterno1
+                                            +"\":{"+ operador0 +":\""+valorString1+"\"}},\"limit\":0}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
+                                            + "\"$db\":\""+nombd+"\"},\"numYields\":2,\"reslen\":45,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":3}},"
+                                            + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":4}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":3}},\"Database\":"
+                                            + "{\"acquireCount\":{\"w\":3}},\"Collection\":{\"acquireCount\":{\"w\":3}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
+                                            + "{\"acquireCount\":3,\"timeAcquiringMicros\":13},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
+                                            + "\"durationMillis\":306}}\n";
                                 } else {
-                                    ret += fecha() + " I  WRITE [conn" + (j + 1) + "] remove " + nombd + "." + this.tabla.getNombre()
-                                            + "appName: \"MongoDB Shell\" command: { q: { " + atributoTipo.split(":")[0] + ": { " + operador0 + ":" + valorString1 + " } }, limit: 1 }  planSummary: COLLSCAN keysExamined:0 docsExamined:18 ndeleted:1 keysDeleted:1 numYields:1 queryHash:057916ED planCacheKey:057916ED locks:{ ParallelBatchWriterMode: { acquireCount: { r: 2 } }, ReplicationStateTransition: { acquireCount: { w: 2 } }, Global: { acquireCount: { w: 2 } }, Database: { acquireCount: { w: 2 } }, Collection: { acquireCount: { w: 2 } }, Mutex: { acquireCount: { r: 3 } } } flowControl:{ acquireCount: 2, timeAcquiringMicros: 6 } storage:{} 31ms\n";
+                                    ret += "{\"t\":{\"$date\":\""+fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                                            +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                                            +nombd + "." + this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"delete\":\""
+                                            +this.tabla.getNombre()+"\",\"deletes\":[{\"q\":{\""+atributoTipo.split(":")[0]
+                                            +"\":{"+ operador0 +":\""+valorString1+"\"}},\"limit\":0}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
+                                            + "\"$db\":\""+nombd+"\"},\"numYields\":2,\"reslen\":45,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":3}},"
+                                            + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":4}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":3}},\"Database\":"
+                                            + "{\"acquireCount\":{\"w\":3}},\"Collection\":{\"acquireCount\":{\"w\":3}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
+                                            + "{\"acquireCount\":3,\"timeAcquiringMicros\":13},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
+                                            + "\"durationMillis\":306}}\n";
                                 }
-
                             } else if (operacion0.compareTo("insert") == 0) {
-                                ret += fecha() + " I  WRITE [conn" + (j + 1) + "] command " + nombd + "." + this.tabla.getNombre() + ".insert ({" + atributoTipo.split(":")[0] + ": " + valorString1 + " " + "})\n";
-
+                                ret += "{\"t\":{\"$date\":\""+fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                                        +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                                        +nombd+"."+this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"insert\":\""
+                                        +this.tabla.getNombre()+"\",\"documents\":[{\""+atributoTipo.split(":")[0]+"\":\""+valorString1+"\"}],"
+                                        + "\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},\"$db\":\""
+                                        +nombd+"\"},\"ninserted\":1,\"keysInserted\":1,\"numYields\":0,\"reslen\":45,\"locks\":"
+                                        + "{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":1}},\"ReplicationStateTransition\":"
+                                        + "{\"acquireCount\":{\"w\":1}},\"Global\":{\"acquireCount\":{\"w\":1}},\"Database\":{\"acquireCount\":"
+                                        + "{\"w\":1}},\"Collection\":{\"acquireCount\":{\"w\":1}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
+                                        + "{\"acquireCount\":1,\"timeAcquiringMicros\":6},\"storage\":{\"data\":{\"bytesRead\":1114,\"timeReadingMicros\":34}},"
+                                        + "\"remote\":\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":205}}\n";
                             }
 
                         }
@@ -768,6 +827,21 @@ public class BD implements Serializable {
 
     private String generaNumero() {
         return "" + (int) (Math.random() * 25 + 1);
+    }
+
+    private String atributosProjectionMongoDB(ArrayList<String> arr) {
+        String ret="";
+        
+        int nAtributos=(int) (Math.random() * arr.size())+1;
+        Collections.shuffle(arr);
+        System.out.println("nAtributos: "+nAtributos);
+        for(int i=0;i<nAtributos;i++){
+            ret += "\""+arr.get(i).split(":")[0]+"\":1,";
+        }
+        if(ret.charAt(ret.length()-1)==','){
+            ret=ret.substring(0, ret.length()-1);
+        }
+        return ret;
     }
 
 }
