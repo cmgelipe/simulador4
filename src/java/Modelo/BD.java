@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.faces.model.SelectItem;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 /**
  *
@@ -90,7 +91,9 @@ public class BD implements Serializable {
         } else if (this.TipoBD.compareTo("b") == 0 || this.TipoBD.compareTo("c") == 0) {
             cadena = generarPostgreSQL(arr);
         } else if (this.TipoBD.compareTo("d") == 0) {
-            cadena = generarMongoDB(arr);
+            ArrayList<String> evitados=new ArrayList<>();
+            evitados.add("imagen");
+            cadena = generarMongoDB(arr,evitados);
         }
     }
 
@@ -518,11 +521,11 @@ public class BD implements Serializable {
                                     int ale = (int) (Math.random() * tam0);
                                     ArrayList c_valor = accexternopost.ejecutarConsulta("SELECT " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " LIMIT 1 OFFSET " + ale + ";");
                                     if (operacion0.compareTo("select") == 0) {
-                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador0 + "'" + ((ArrayList) c_valor.get(0)).get(0) + "'\n";
                                     } else if (operacion0.compareTo("update") == 0) {
-                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "='" + generaCadena() + "' WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "='" + generaCadena() + "' WHERE " + atributoTipo.split(":")[0] + operador0 + "'" + ((ArrayList) c_valor.get(0)).get(0) + "'\n";
                                     } else if (operacion0.compareTo("delete") == 0) {
-                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador0 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion0 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador0 + "'" + ((ArrayList) c_valor.get(0)).get(0) + "'\n";
                                     }
                                 }
                                 break;
@@ -557,11 +560,11 @@ public class BD implements Serializable {
                                     int ale = (int) (Math.random() * tam2);
                                     ArrayList c_valor = accexternopost.ejecutarConsulta("SELECT " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " LIMIT 1 OFFSET " + ale + ";");
                                     if (operacion2.compareTo("select") == 0) {
-                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " " + atributoTipo.split(":")[0] + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "'" + ((ArrayList) c_valor.get(0)).get(0) + "'\n";
                                     } else if (operacion2.compareTo("update") == 0) {
-                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "=" + atributoTipo.split(":")[0] + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " " + tabla.getNombre() + " SET " + atributoTipo.split(":")[0] + "=" + atributoTipo.split(":")[0] + " WHERE " + atributoTipo.split(":")[0] + operador2 + "'" + ((ArrayList) c_valor.get(0)).get(0) + "'\n";
                                     } else if (operacion2.compareTo("delete") == 0) {
-                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "\"" + ((ArrayList) c_valor.get(0)).get(0) + "\"\n";
+                                        ret += pid + "-_-" + ip + "LOG:  sentencia: " + operacion2 + " FROM " + tabla.getNombre() + " WHERE " + atributoTipo.split(":")[0] + operador2 + "'" + ((ArrayList) c_valor.get(0)).get(0) + "'\n";
                                     }
                                 }
                                 break;
@@ -599,17 +602,19 @@ public class BD implements Serializable {
         return ret;
     }
 
-    private String generarMongoDB(String[] arr) {
+    private String generarMongoDB(String[] arr, ArrayList<String> evitados) {
         String ret = "";
         try {
             accexternomongo = new AccesoDatosMG(dirbd, nombd, this.tabla.getNombre(), usubd, passbd);
             if (accexternomongo.conectar()) {
+                ArrayList<String> atributos = accexternomongo.atributos(this.nombd, this.getTabla().getNombre());
+                System.out.println("Antes: "+atributos.size());
+                atributos.removeIf(x->evitados.contains(x.split(":")[0]));
+                System.out.println("Despues: "+atributos.size());
                 for (int j = 0; j < nSitios; j++) {
                     String ip = ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + ":" + ((int) (Math.random() * 90)) + "" + ((int) (Math.random() * 900));
                     String pid = ""+(int) ((Math.random() * 8001) + 1000);
-                    ArrayList<String> atributos = new ArrayList<>();
                     for (int i = 0; i < (nConsultas); i++) {
-                        atributos = accexternomongo.atributos(this.nombd, this.getTabla().getNombre());
                         String projection=atributosProjectionMongoDB(atributos);
                         int numeroA = (int) (Math.random() * atributos.size());
                         String atributoTipo = atributos.get(numeroA);
@@ -718,8 +723,31 @@ public class BD implements Serializable {
                                     valorString2 = valores[(int) Math.random() * valores.length];
                                 }
                             } else {
-                                valorString1 = c_valor.getString(atributoTipo.split(":")[0]);
-                                valorString2 = c_valor2.getString(atributoTipo.split(":")[0]);
+                                try{
+                                    valorString1 = c_valor.getString(atributoTipo.split(":")[0]);
+                                }catch(java.lang.ClassCastException e){
+                                    String mensaje=e.getMessage();
+                                    if(mensaje!=null){
+                                        if(mensaje.contains("org.bson.types.ObjectId cannot be cast to java.lang.String")){
+                                            valorString1 = c_valor.getObjectId(atributoTipo.split(":")[0]).toString();
+                                        }
+                                    }else{
+                                        e.printStackTrace();
+                                    }
+                                }
+                                try{
+                                    valorString2 = c_valor2.getString(atributoTipo.split(":")[0]);
+                                }catch(java.lang.ClassCastException e){
+                                    String mensaje=e.getMessage();
+                                    if(mensaje!=null){
+                                        if(mensaje.contains("org.bson.types.ObjectId cannot be cast to java.lang.String")){
+                                            valorString2 = c_valor2.getObjectId(atributoTipo.split(":")[0]).toString();
+                                        }
+                                    }else{
+                                        e.printStackTrace();
+                                    }
+                                    
+                                }
                             }
                             if (operacion0.compareTo("find") == 0) {
                                 if (atributoDocInterno1 != null) {
@@ -752,7 +780,7 @@ public class BD implements Serializable {
                                           +nombd + "." + this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"update\":\""
                                           +this.tabla.getNombre()+"\",\"updates\":[{\"q\":{\""+atributoTipo.split(":")[0]+"." + atributoDocInterno1 
                                           +"\":{"+operador0+":\""+valorString1+"\"}},\"u\":{\"$set\":{\""+ atributoTipo.split(":")[0] + "." + atributoDocInterno2 +"\":\""
-                                          +valorString2+"\"}},\"multi\":true}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
+                                          +valorString2+"\"}},\"multi\":true}],\"nModified\":1,\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
                                           + "\"$db\":\""+nombd+"\"},\"numYields\":1,\"reslen\":60,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
                                           + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":3}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":2}},\"Database\":"
                                           + "{\"acquireCount\":{\"w\":2}},\"Collection\":{\"acquireCount\":{\"w\":2}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
@@ -764,7 +792,7 @@ public class BD implements Serializable {
                                           +nombd + "." + this.tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"update\":\""
                                           +this.tabla.getNombre()+"\",\"updates\":[{\"q\":{\""+atributoTipo.split(":")[0] 
                                           +"\":{"+operador0+":\""+valorString1+"\"}},\"u\":{\"$set\":{\""+ atributoTipo.split(":")[0] +"\":\""
-                                          +valorString2+"\"}},\"multi\":true}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
+                                          +valorString2+"\"}},\"multi\":true}],\"nModified\":1,\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
                                           + "\"$db\":\""+nombd+"\"},\"numYields\":1,\"reslen\":60,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
                                           + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":3}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":2}},\"Database\":"
                                           + "{\"acquireCount\":{\"w\":2}},\"Collection\":{\"acquireCount\":{\"w\":2}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
@@ -813,6 +841,9 @@ public class BD implements Serializable {
                         }
                     }
                 }
+                for(Integer i:ocupaciones.keySet()){
+                    System.out.println(i+": "+ocupaciones.get(i));
+                }
             }
 
         } catch (Exception e) {
@@ -828,7 +859,8 @@ public class BD implements Serializable {
     private String generaNumero() {
         return "" + (int) (Math.random() * 25 + 1);
     }
-
+    HashMap<Integer,Integer> ocupaciones=new HashMap<>();
+    
     private String atributosProjectionMongoDB(ArrayList<String> arr) {
         String ret="";
         
@@ -837,6 +869,12 @@ public class BD implements Serializable {
         System.out.println("nAtributos: "+nAtributos);
         for(int i=0;i<nAtributos;i++){
             ret += "\""+arr.get(i).split(":")[0]+"\":1,";
+            if(ocupaciones.get(i)==null){
+                ocupaciones.put(i, 1);
+            }else{
+                ocupaciones.put(i, ocupaciones.get(i)+1);
+            }
+            
         }
         if(ret.charAt(ret.length()-1)==','){
             ret=ret.substring(0, ret.length()-1);
@@ -845,3 +883,4 @@ public class BD implements Serializable {
     }
 
 }
+
