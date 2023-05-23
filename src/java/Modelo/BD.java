@@ -91,6 +91,7 @@ public class BD implements Serializable {
         } else if (this.TipoBD.compareTo("b") == 0 || this.TipoBD.compareTo("c") == 0) {
             cadena = generarPostgreSQL(arr);
         } else if (this.TipoBD.compareTo("d") == 0) {
+            
             ArrayList<String> evitados=new ArrayList<>();
             evitados.add("imagen");
             cadena = generarMongoDB(arr,evitados);
