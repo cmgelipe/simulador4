@@ -26,6 +26,8 @@ public class TraductorTipoDato {
             case "DECIMAL":
             case "FLOAT":
             case "DOUBLE":
+            case "INT":
+            case "LONG":
                 return 1;
             case "DATE":
             case "TIME":
@@ -36,6 +38,12 @@ public class TraductorTipoDato {
                 return 4;
             case "ARRAY":
                 return 5;
+            case "BOOL":
+            case "NULL":
+            case "OBJECT":
+                // Tipos de MongoDB sin un operador de rango natural: solo
+                // igualdad/desigualdad (misma categoría operacional que 0).
+                return 0;
             default:
                 return 3;
         }

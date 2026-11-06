@@ -51,6 +51,13 @@ public class AccesoDatosMongoDB implements Serializable {
         return getMongoClient() != null;
     }
 
+    public void desconectar() throws Exception {
+        if (mongoClient != null) {
+            mongoClient.close();
+            mongoClient = null;
+        }
+    }
+
     /**
      * @return the tabla
      */

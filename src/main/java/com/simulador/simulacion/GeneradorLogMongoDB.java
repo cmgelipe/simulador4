@@ -16,13 +16,16 @@ import org.bson.Document;
  */
 public class GeneradorLogMongoDB {
 
+    private static final int MAX_INTENTOS_MUESTREO = 20;
+
     private final HashMap<Integer, Integer> ocupaciones = new HashMap<>();
 
     public String generar(String dirbd, String nombd, String usubd, String passbd,
             Tabla tabla, int nSitios, int nConsultas, String[] arr, ArrayList<String> evitados) {
         String ret = "";
+        AccesoDatosMongoDB accexternomongo = null;
         try {
-            AccesoDatosMongoDB accexternomongo = new AccesoDatosMongoDB(dirbd, nombd, tabla.getNombre(), usubd, passbd);
+            accexternomongo = new AccesoDatosMongoDB(dirbd, nombd, tabla.getNombre(), usubd, passbd);
             if (accexternomongo.conectar()) {
                 ArrayList<String> atributos = accexternomongo.atributos(nombd, tabla.getNombre());
                 System.out.println("Antes: "+atributos.size());
@@ -31,6 +34,7 @@ public class GeneradorLogMongoDB {
                 for (int j = 0; j < nSitios; j++) {
                     String ip = ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + ":" + ((int) (Math.random() * 90)) + "" + ((int) (Math.random() * 900));
                     String pid = ""+(int) ((Math.random() * 8001) + 1000);
+                    consultaMongo:
                     for (int i = 0; i < (nConsultas); i++) {
                         String projection=atributosProjectionMongoDB(atributos);
                         int numeroA = (int) (Math.random() * atributos.size());
@@ -89,11 +93,21 @@ public class GeneradorLogMongoDB {
                             String valorString2 = "";
                             String atributoDocInterno1 = null;
                             String atributoDocInterno2 = null;
+                            int intentosRestantes = MAX_INTENTOS_MUESTREO;
                             while (c_valor.get(atributoTipo.split(":")[0]) == null) {
+                                if (--intentosRestantes <= 0) {
+                                    // No se encontró ningún documento con el campo poblado:
+                                    // se descarta esta consulta en vez de bloquear la generación.
+                                    continue consultaMongo;
+                                }
                                 ale = (int) (Math.random() * res);
                                 c_valor = colec.find().skip(ale).limit(1).first();
                             }
+                            intentosRestantes = MAX_INTENTOS_MUESTREO;
                             while (c_valor2.get(atributoTipo.split(":")[0]) == null) {
+                                if (--intentosRestantes <= 0) {
+                                    continue consultaMongo;
+                                }
                                 ale = (int) (Math.random() * res);
                                 c_valor2 = colec.find().skip(ale).limit(1).first();
                             }
@@ -140,31 +154,8 @@ public class GeneradorLogMongoDB {
                                     valorString2 = valores[(int) Math.random() * valores.length];
                                 }
                             } else {
-                                try{
-                                    valorString1 = c_valor.getString(atributoTipo.split(":")[0]);
-                                }catch(java.lang.ClassCastException e){
-                                    String mensaje=e.getMessage();
-                                    if(mensaje!=null){
-                                        if(mensaje.contains("org.bson.types.ObjectId cannot be cast to java.lang.String")){
-                                            valorString1 = c_valor.getObjectId(atributoTipo.split(":")[0]).toString();
-                                        }
-                                    }else{
-                                        e.printStackTrace();
-                                    }
-                                }
-                                try{
-                                    valorString2 = c_valor2.getString(atributoTipo.split(":")[0]);
-                                }catch(java.lang.ClassCastException e){
-                                    String mensaje=e.getMessage();
-                                    if(mensaje!=null){
-                                        if(mensaje.contains("org.bson.types.ObjectId cannot be cast to java.lang.String")){
-                                            valorString2 = c_valor2.getObjectId(atributoTipo.split(":")[0]).toString();
-                                        }
-                                    }else{
-                                        e.printStackTrace();
-                                    }
-
-                                }
+                                valorString1 = extraerValorComoString(c_valor, atributoTipo.split(":")[0]);
+                                valorString2 = extraerValorComoString(c_valor2, atributoTipo.split(":")[0]);
                             }
                             if (operacion0.compareTo("find") == 0) {
                                 if (atributoDocInterno1 != null) {
@@ -265,6 +256,14 @@ public class GeneradorLogMongoDB {
 
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (accexternomongo != null) {
+                try {
+                    accexternomongo.desconectar();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
         return ret;
     }
@@ -288,5 +287,19 @@ public class GeneradorLogMongoDB {
             ret=ret.substring(0, ret.length()-1);
         }
         return ret;
+    }
+
+    /**
+     * Obtiene el valor de un campo de un documento como String, sin
+     * depender de capturar ClassCastException para distinguir ObjectId de
+     * String (antes: try/catch sobre c_valor.getString(...) inspeccionando
+     * el mensaje de la excepción).
+     */
+    private String extraerValorComoString(Document doc, String campo) {
+        Object valor = doc.get(campo);
+        if (valor == null) {
+            return "";
+        }
+        return valor.toString();
     }
 }
