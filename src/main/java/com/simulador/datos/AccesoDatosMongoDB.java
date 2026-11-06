@@ -6,18 +6,15 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
-import static com.mongodb.client.model.Aggregates.project;
-import com.mongodb.client.model.Projections;
+import com.mongodb.client.model.Aggregates;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Map;
 import org.bson.Document;
-import org.bson.conversions.Bson;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.bson.types.Decimal128;
+import org.bson.types.ObjectId;
 
 /**
  * Acceso a datos para MongoDB (antes Datos.AccesoDatosMG).
@@ -72,25 +69,71 @@ public class AccesoDatosMongoDB implements Serializable {
         this.tabla = tabla;
     }
 
+    private static final int TAMANIO_MUESTRA_ESQUEMA = 20;
+
+    /**
+     * Infiere el esquema (campo:tipo) de la colección en una sola pasada.
+     * Antes: se tomaba un único documento de muestra y se hacía, por cada
+     * campo encontrado, una agregación $type aparte contra la base del
+     * usuario (1 + N consultas). Ahora se muestrean varios documentos con
+     * $sample y el tipo se determina del valor ya traído por el driver, sin
+     * round trips adicionales.
+     */
     public synchronized ArrayList<String> atributos(String nombreBase, String nombre) {
-        ArrayList<String> res=new ArrayList<>();
         MongoDatabase db = this.getMongoClient().getDatabase(nombreBase);
         MongoCollection<Document> collection = db.getCollection(nombre);
-        Document doc = collection.find().first();
-        try {
-            Iterator js = new JSONObject(doc.toJson()).keys();
-            while (js.hasNext()) {
-                String key=js.next().toString();
-                Bson group=project(Projections.computed(key, Document.parse("{$type: '$"+key+"'}")));
-                List<Document> r=collection.aggregate(Arrays.asList(group)).into(new ArrayList<>());
-                String tipo=""+(new JSONObject(r.get(0).toJson()).get(key));
-                System.out.println(key+":"+tipo);
-                res.add(key+":"+tipo);
+        List<Document> muestra = collection.aggregate(
+                Arrays.asList(Aggregates.sample(TAMANIO_MUESTRA_ESQUEMA)))
+                .into(new ArrayList<>());
+
+        LinkedHashMap<String, String> tipos = new LinkedHashMap<>();
+        for (Document doc : muestra) {
+            for (String campo : doc.keySet()) {
+                if (tipos.containsKey(campo)) {
+                    continue;
+                }
+                Object valor = doc.get(campo);
+                if (valor != null) {
+                    tipos.put(campo, tipoBson(valor));
+                }
             }
-        } catch (JSONException ex) {
-            ex.printStackTrace();
+        }
+
+        ArrayList<String> res = new ArrayList<>();
+        for (Map.Entry<String, String> entrada : tipos.entrySet()) {
+            System.out.println(entrada.getKey() + ":" + entrada.getValue());
+            res.add(entrada.getKey() + ":" + entrada.getValue());
         }
         return res;
+    }
+
+    /**
+     * Traduce el valor ya materializado por el driver al mismo nombre de
+     * tipo que antes devolvía el operador $type de MongoDB.
+     */
+    private String tipoBson(Object valor) {
+        if (valor instanceof String) {
+            return "string";
+        } else if (valor instanceof Double) {
+            return "double";
+        } else if (valor instanceof Integer) {
+            return "int";
+        } else if (valor instanceof Long) {
+            return "long";
+        } else if (valor instanceof Decimal128) {
+            return "decimal";
+        } else if (valor instanceof Boolean) {
+            return "bool";
+        } else if (valor instanceof ObjectId) {
+            return "objectId";
+        } else if (valor instanceof java.util.Date) {
+            return "date";
+        } else if (valor instanceof List) {
+            return "array";
+        } else if (valor instanceof Document) {
+            return "object";
+        }
+        return "string";
     }
 
     public synchronized ArrayList<String> tablas(String nombreBase) {

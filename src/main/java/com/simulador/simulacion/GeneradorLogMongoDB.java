@@ -1,12 +1,17 @@
 package com.simulador.simulacion;
 
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Filters;
 import com.simulador.datos.AccesoDatosMongoDB;
 import com.simulador.modelo.Tabla;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
 /**
  * Genera un log simulado de operaciones sobre MongoDB (antes
@@ -15,8 +20,6 @@ import org.bson.Document;
  * estado entre llamadas sucesivas a generar(...).
  */
 public class GeneradorLogMongoDB {
-
-    private static final int MAX_INTENTOS_MUESTREO = 20;
 
     private final HashMap<Integer, Integer> ocupaciones = new HashMap<>();
 
@@ -31,6 +34,11 @@ public class GeneradorLogMongoDB {
                 System.out.println("Antes: "+atributos.size());
                 atributos.removeIf(x->evitados.contains(x.split(":")[0]));
                 System.out.println("Despues: "+atributos.size());
+                // El conteo y el handle de la colección no cambian durante toda
+                // la generación: antes se recalculaban en cada una de las
+                // nSitios*nConsultas iteraciones.
+                MongoCollection<Document> colec = accexternomongo.getMongoClient().getDatabase(nombd).getCollection(tabla.getNombre());
+                double res = (double) colec.countDocuments();
                 for (int j = 0; j < nSitios; j++) {
                     String ip = ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + ":" + ((int) (Math.random() * 90)) + "" + ((int) (Math.random() * 900));
                     String pid = ""+(int) ((Math.random() * 8001) + 1000);
@@ -81,36 +89,19 @@ public class GeneradorLogMongoDB {
                         }
                         String operador0 = c_operador0.get((int) (Math.random() * c_operador0.size()));
                         String operacion0 = c_operacion0.get((int) (Math.random() * c_operacion0.size()));
-                        MongoCollection<Document> colec = accexternomongo.getMongoClient().getDatabase(nombd).getCollection(tabla.getNombre());
-                        double res = (double) colec.countDocuments();
                         if (res > 0) {
-                            int ale = 0;
-                            ale = (int) (Math.random() * res);
-                            Document c_valor = colec.find().skip(ale).limit(1).first();
-                            ale = (int) (Math.random() * res);
-                            Document c_valor2 = colec.find().skip(ale).limit(1).first();
+                            String campo = atributoTipo.split(":")[0];
+                            Document c_valor = muestraDocumentoConCampo(colec, campo);
+                            Document c_valor2 = muestraDocumentoConCampo(colec, campo);
+                            if (c_valor == null || c_valor2 == null) {
+                                // No hay ningún documento con ese campo poblado:
+                                // se descarta esta consulta en vez de bloquear la generación.
+                                continue consultaMongo;
+                            }
                             String valorString1 = "";
                             String valorString2 = "";
                             String atributoDocInterno1 = null;
                             String atributoDocInterno2 = null;
-                            int intentosRestantes = MAX_INTENTOS_MUESTREO;
-                            while (c_valor.get(atributoTipo.split(":")[0]) == null) {
-                                if (--intentosRestantes <= 0) {
-                                    // No se encontró ningún documento con el campo poblado:
-                                    // se descarta esta consulta en vez de bloquear la generación.
-                                    continue consultaMongo;
-                                }
-                                ale = (int) (Math.random() * res);
-                                c_valor = colec.find().skip(ale).limit(1).first();
-                            }
-                            intentosRestantes = MAX_INTENTOS_MUESTREO;
-                            while (c_valor2.get(atributoTipo.split(":")[0]) == null) {
-                                if (--intentosRestantes <= 0) {
-                                    continue consultaMongo;
-                                }
-                                ale = (int) (Math.random() * res);
-                                c_valor2 = colec.find().skip(ale).limit(1).first();
-                            }
                             if (atributoTipo.split(":")[1].toUpperCase().compareTo("OBJECTID") == 0) {
                                 valorString1 = c_valor.getObjectId(atributoTipo.split(":")[0]).toString();
                                 valorString2 = c_valor2.getObjectId(atributoTipo.split(":")[0]).toString();
@@ -158,92 +149,16 @@ public class GeneradorLogMongoDB {
                                 valorString2 = extraerValorComoString(c_valor2, atributoTipo.split(":")[0]);
                             }
                             if (operacion0.compareTo("find") == 0) {
-                                if (atributoDocInterno1 != null) {
-                                    ret += "{\"t\":{\"$date\":\""+ GeneradorLogUtil.fecha().trim() +"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
-                                            +", \"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
-                                            +nombd + "." + tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"find\":\""
-                                            +tabla.getNombre()+"\",\"filter\":{\"" + atributoTipo.split(":")[0] + "." + atributoDocInterno1 + "\": {" + operador0 + ":\"" + valorString1
-                                            + "\"} },\"projection\":{"+projection+"},\"lsid\":{\"id\":{\"$uuid\":\"60e637fc-f267-4840-993c-a3be0d6851ea\"}},\"$db\":\""
-                                            +nombd+"\"},\"planSummary\":\"COLLSCAN\",\"keysExamined\":0,\"docsExamined\":77,\"cursorExhausted\":true,\"numYields\":0,\"nreturned\":"
-                                            + "1870,\"queryHash\":\"4C06B3EF\",\"planCacheKey\":\"4FDA4125\",\"reslen\":2882,\"locks\":{\"Global\":{\"acquireCount\":{\"r\":1}},\"Mutex\":"
-                                            + "{\"acquireCount\":{\"r\":1}}},\"storage\":{\"data\":{\"bytesRead\":27422,\"timeReadingMicros\":105}},\"remote\":"
-                                            + "\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":36}}\n";
-                                    atributoDocInterno1 = null;
-                                } else {
-                                    ret += "{\"t\":{\"$date\":\""+ GeneradorLogUtil.fecha().trim() +"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
-                                            +", \"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
-                                            +nombd + "." + tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"find\":\""
-                                            +tabla.getNombre()+"\",\"filter\":{\"" + atributoTipo.split(":")[0] + "\": {" + operador0 + ":\"" + valorString1
-                                            + "\"} },\"projection\":{"+projection+"},\"lsid\":{\"id\":{\"$uuid\":\"60e637fc-f267-4840-993c-a3be0d6851ea\"}},\"$db\":\""
-                                            +nombd+"\"},\"planSummary\":\"COLLSCAN\",\"keysExamined\":0,\"docsExamined\":77,\"cursorExhausted\":true,\"numYields\":0,\"nreturned\":"
-                                            + "1870,\"queryHash\":\"4C06B3EF\",\"planCacheKey\":\"4FDA4125\",\"reslen\":2882,\"locks\":{\"Global\":{\"acquireCount\":{\"r\":1}},\"Mutex\":"
-                                            + "{\"acquireCount\":{\"r\":1}}},\"storage\":{\"data\":{\"bytesRead\":27422,\"timeReadingMicros\":105}},\"remote\":"
-                                            + "\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":36}}\n";
-                                }
-
+                                ret += construirLogFind(pid, ip, j + 1, nombd, tabla.getNombre(), campo,
+                                        atributoDocInterno1, operador0, valorString1, projection);
                             } else if (operacion0.compareTo("update") == 0) {
-                                if (atributoDocInterno1 != null && atributoDocInterno2 != null) {
-                                    ret+="{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",\"c\":\"COMMAND\",\"id\":"+pid
-                                          +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
-                                          +nombd + "." + tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"update\":\""
-                                          +tabla.getNombre()+"\",\"updates\":[{\"q\":{\""+atributoTipo.split(":")[0]+"." + atributoDocInterno1
-                                          +"\":{"+operador0+":\""+valorString1+"\"}},\"u\":{\"$set\":{\""+ atributoTipo.split(":")[0] + "." + atributoDocInterno2 +"\":\""
-                                          +valorString2+"\"}},\"multi\":true}],\"nModified\":1,\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
-                                          + "\"$db\":\""+nombd+"\"},\"numYields\":1,\"reslen\":60,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
-                                          + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":3}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":2}},\"Database\":"
-                                          + "{\"acquireCount\":{\"w\":2}},\"Collection\":{\"acquireCount\":{\"w\":2}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
-                                          + "{\"acquireCount\":2,\"timeAcquiringMicros\":6},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
-                                          + "\"durationMillis\":28}}\n";
-                                } else if (atributoDocInterno1 == null && atributoDocInterno2 == null) {
-                                    ret+="{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
-                                          +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
-                                          +nombd + "." + tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"update\":\""
-                                          +tabla.getNombre()+"\",\"updates\":[{\"q\":{\""+atributoTipo.split(":")[0]
-                                          +"\":{"+operador0+":\""+valorString1+"\"}},\"u\":{\"$set\":{\""+ atributoTipo.split(":")[0] +"\":\""
-                                          +valorString2+"\"}},\"multi\":true}],\"nModified\":1,\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
-                                          + "\"$db\":\""+nombd+"\"},\"numYields\":1,\"reslen\":60,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
-                                          + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":3}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":2}},\"Database\":"
-                                          + "{\"acquireCount\":{\"w\":2}},\"Collection\":{\"acquireCount\":{\"w\":2}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
-                                          + "{\"acquireCount\":2,\"timeAcquiringMicros\":6},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
-                                          + "\"durationMillis\":28}}\n";
-                                }
-
+                                ret += construirLogUpdate(pid, ip, j + 1, nombd, tabla.getNombre(), campo,
+                                        atributoDocInterno1, atributoDocInterno2, operador0, valorString1, valorString2);
                             } else if (operacion0.compareTo("delete") == 0) {
-                                if (atributoDocInterno1 != null) {
-                                    ret += "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
-                                            +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
-                                            +nombd + "." + tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"delete\":\""
-                                            +tabla.getNombre()+"\",\"deletes\":[{\"q\":{\""+atributoTipo.split(":")[0] + "." + atributoDocInterno1
-                                            +"\":{"+ operador0 +":\""+valorString1+"\"}},\"limit\":0}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
-                                            + "\"$db\":\""+nombd+"\"},\"numYields\":2,\"reslen\":45,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":3}},"
-                                            + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":4}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":3}},\"Database\":"
-                                            + "{\"acquireCount\":{\"w\":3}},\"Collection\":{\"acquireCount\":{\"w\":3}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
-                                            + "{\"acquireCount\":3,\"timeAcquiringMicros\":13},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
-                                            + "\"durationMillis\":306}}\n";
-                                } else {
-                                    ret += "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
-                                            +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
-                                            +nombd + "." + tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"delete\":\""
-                                            +tabla.getNombre()+"\",\"deletes\":[{\"q\":{\""+atributoTipo.split(":")[0]
-                                            +"\":{"+ operador0 +":\""+valorString1+"\"}},\"limit\":0}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
-                                            + "\"$db\":\""+nombd+"\"},\"numYields\":2,\"reslen\":45,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":3}},"
-                                            + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":4}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":3}},\"Database\":"
-                                            + "{\"acquireCount\":{\"w\":3}},\"Collection\":{\"acquireCount\":{\"w\":3}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
-                                            + "{\"acquireCount\":3,\"timeAcquiringMicros\":13},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
-                                            + "\"durationMillis\":306}}\n";
-                                }
+                                ret += construirLogDelete(pid, ip, j + 1, nombd, tabla.getNombre(), campo,
+                                        atributoDocInterno1, operador0, valorString1);
                             } else if (operacion0.compareTo("insert") == 0) {
-                                ret += "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
-                                        +",\"ctx\":\"conn"+(j+1)+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
-                                        +nombd+"."+tabla.getNombre()+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"insert\":\""
-                                        +tabla.getNombre()+"\",\"documents\":[{\""+atributoTipo.split(":")[0]+"\":\""+valorString1+"\"}],"
-                                        + "\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},\"$db\":\""
-                                        +nombd+"\"},\"ninserted\":1,\"keysInserted\":1,\"numYields\":0,\"reslen\":45,\"locks\":"
-                                        + "{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":1}},\"ReplicationStateTransition\":"
-                                        + "{\"acquireCount\":{\"w\":1}},\"Global\":{\"acquireCount\":{\"w\":1}},\"Database\":{\"acquireCount\":"
-                                        + "{\"w\":1}},\"Collection\":{\"acquireCount\":{\"w\":1}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
-                                        + "{\"acquireCount\":1,\"timeAcquiringMicros\":6},\"storage\":{\"data\":{\"bytesRead\":1114,\"timeReadingMicros\":34}},"
-                                        + "\"remote\":\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":205}}\n";
+                                ret += construirLogInsert(pid, ip, j + 1, nombd, tabla.getNombre(), campo, valorString1);
                             }
 
                         }
@@ -287,6 +202,102 @@ public class GeneradorLogMongoDB {
             ret=ret.substring(0, ret.length()-1);
         }
         return ret;
+    }
+
+    /**
+     * Construye la línea de log de una operación "find" (antes: dos bloques
+     * casi idénticos duplicados dentro de generar(), uno para cuando el
+     * valor venía de un subdocumento de un array y otro para cuando no).
+     */
+    private String construirLogFind(String pid, String ip, int conexion, String nombd, String tabla,
+            String campo, String atributoDocInterno, String operador0, String valorString1, String projection) {
+        String campoFiltro = atributoDocInterno != null ? campo + "." + atributoDocInterno : campo;
+        return "{\"t\":{\"$date\":\""+ GeneradorLogUtil.fecha().trim() +"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                +", \"ctx\":\"conn"+conexion+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                +nombd + "." + tabla+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"find\":\""
+                +tabla+"\",\"filter\":{\"" + campoFiltro + "\": {" + operador0 + ":\"" + valorString1
+                + "\"} },\"projection\":{"+projection+"},\"lsid\":{\"id\":{\"$uuid\":\"60e637fc-f267-4840-993c-a3be0d6851ea\"}},\"$db\":\""
+                +nombd+"\"},\"planSummary\":\"COLLSCAN\",\"keysExamined\":0,\"docsExamined\":77,\"cursorExhausted\":true,\"numYields\":0,\"nreturned\":"
+                + "1870,\"queryHash\":\"4C06B3EF\",\"planCacheKey\":\"4FDA4125\",\"reslen\":2882,\"locks\":{\"Global\":{\"acquireCount\":{\"r\":1}},\"Mutex\":"
+                + "{\"acquireCount\":{\"r\":1}}},\"storage\":{\"data\":{\"bytesRead\":27422,\"timeReadingMicros\":105}},\"remote\":"
+                + "\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":36}}\n";
+    }
+
+    /**
+     * Construye la línea de log de una operación "update" (antes: dos
+     * bloques casi idénticos duplicados, con una inconsistencia de
+     * formato entre ellos -espacios distintos tras "s":"I"- que aquí se
+     * unifica al formato usado por los demás bloques de log).
+     */
+    private String construirLogUpdate(String pid, String ip, int conexion, String nombd, String tabla,
+            String campo, String atributoDocInterno1, String atributoDocInterno2, String operador0,
+            String valorString1, String valorString2) {
+        String campoFiltro = atributoDocInterno1 != null ? campo + "." + atributoDocInterno1 : campo;
+        String campoSet = atributoDocInterno2 != null ? campo + "." + atributoDocInterno2 : campo;
+        return "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+              +",\"ctx\":\"conn"+conexion+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+              +nombd + "." + tabla+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"update\":\""
+              +tabla+"\",\"updates\":[{\"q\":{\""+campoFiltro
+              +"\":{"+operador0+":\""+valorString1+"\"}},\"u\":{\"$set\":{\""+ campoSet +"\":\""
+              +valorString2+"\"}},\"multi\":true}],\"nModified\":1,\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
+              + "\"$db\":\""+nombd+"\"},\"numYields\":1,\"reslen\":60,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
+              + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":3}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":2}},\"Database\":"
+              + "{\"acquireCount\":{\"w\":2}},\"Collection\":{\"acquireCount\":{\"w\":2}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
+              + "{\"acquireCount\":2,\"timeAcquiringMicros\":6},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
+              + "\"durationMillis\":28}}\n";
+    }
+
+    /**
+     * Construye la línea de log de una operación "delete" (antes: dos
+     * bloques casi idénticos duplicados).
+     */
+    private String construirLogDelete(String pid, String ip, int conexion, String nombd, String tabla,
+            String campo, String atributoDocInterno, String operador0, String valorString1) {
+        String campoFiltro = atributoDocInterno != null ? campo + "." + atributoDocInterno : campo;
+        return "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                +",\"ctx\":\"conn"+conexion+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                +nombd + "." + tabla+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"delete\":\""
+                +tabla+"\",\"deletes\":[{\"q\":{\""+campoFiltro
+                +"\":{"+ operador0 +":\""+valorString1+"\"}},\"limit\":0}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
+                + "\"$db\":\""+nombd+"\"},\"numYields\":2,\"reslen\":45,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":3}},"
+                + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":4}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":3}},\"Database\":"
+                + "{\"acquireCount\":{\"w\":3}},\"Collection\":{\"acquireCount\":{\"w\":3}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
+                + "{\"acquireCount\":3,\"timeAcquiringMicros\":13},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
+                + "\"durationMillis\":306}}\n";
+    }
+
+    /**
+     * Construye la línea de log de una operación "insert".
+     */
+    private String construirLogInsert(String pid, String ip, int conexion, String nombd, String tabla,
+            String campo, String valorString1) {
+        return "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
+                +",\"ctx\":\"conn"+conexion+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
+                +nombd+"."+tabla+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"insert\":\""
+                +tabla+"\",\"documents\":[{\""+campo+"\":\""+valorString1+"\"}],"
+                + "\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},\"$db\":\""
+                +nombd+"\"},\"ninserted\":1,\"keysInserted\":1,\"numYields\":0,\"reslen\":45,\"locks\":"
+                + "{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":1}},\"ReplicationStateTransition\":"
+                + "{\"acquireCount\":{\"w\":1}},\"Global\":{\"acquireCount\":{\"w\":1}},\"Database\":{\"acquireCount\":"
+                + "{\"w\":1}},\"Collection\":{\"acquireCount\":{\"w\":1}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
+                + "{\"acquireCount\":1,\"timeAcquiringMicros\":6},\"storage\":{\"data\":{\"bytesRead\":1114,\"timeReadingMicros\":34}},"
+                + "\"remote\":\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":205}}\n";
+    }
+
+    /**
+     * Devuelve un documento al azar que tenga el campo indicado poblado
+     * (antes: se pedía un documento al azar con skip/limit -costoso en
+     * Mongo- y se reintentaba del lado del cliente hasta encontrar uno con
+     * el campo no nulo, sin límite de intentos). Al filtrar directamente en
+     * el servidor con $match + $sample ya no hace falta el reintento.
+     */
+    private Document muestraDocumentoConCampo(MongoCollection<Document> colec, String campo) {
+        Bson filtroPoblado = Filters.and(Filters.exists(campo), Filters.ne(campo, null));
+        List<Document> muestra = colec.aggregate(Arrays.asList(
+                Aggregates.match(filtroPoblado),
+                Aggregates.sample(1)
+        )).into(new ArrayList<>());
+        return muestra.isEmpty() ? null : muestra.get(0);
     }
 
     /**
