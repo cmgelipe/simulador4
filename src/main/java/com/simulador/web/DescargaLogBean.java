@@ -1,4 +1,4 @@
-package JBS;
+package com.simulador.web;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,18 +16,21 @@ import javax.servlet.ServletContext;
 import org.primefaces.model.DefaultStreamedContent;
 import org.primefaces.model.StreamedContent;
 
+/**
+ * Managed bean "arch" (antes JBS.BDJB).
+ */
 @ManagedBean(name = "arch")
 @RequestScoped
-public class BDJB implements Serializable {
+public class DescargaLogBean implements Serializable {
 
 
     private StreamedContent file;
     String cadenaArchivo = "";
-    
-    
-    public BDJB() {
+
+
+    public DescargaLogBean() {
         try {
-            inicio objeto = (inicio) FacesContext.getCurrentInstance().getExternalContext().getSessionMap().get("bd");
+            SimuladorBean objeto = (SimuladorBean) FacesContext.getCurrentInstance().getExternalContext().getSessionMap().get("bd");
             cadenaArchivo = objeto.getObj().getCadena();
             String ruta = ((ServletContext) FacesContext.getCurrentInstance().getExternalContext().getContext()).getRealPath("/");
             File f=new File(ruta+"resources\\temṕ.log");
@@ -38,11 +41,11 @@ public class BDJB implements Serializable {
             acc.writeBytes(cadenaArchivo);
             InputStream stream = new FileInputStream(ruta + "resources\\temṕ.log");//((ServletContext) FacesContext.getCurrentInstance().getExternalContext().getContext()).getResourceAsStream(f.getAbsolutePath());
             file = new DefaultStreamedContent(stream, "text/plain", "log.log");
-            
+
         } catch (FileNotFoundException ex) {
             ex.printStackTrace();
         } catch (IOException ex) {
-            
+
             ex.printStackTrace();
         }
     }

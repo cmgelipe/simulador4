@@ -1,4 +1,4 @@
-package Datos;
+package com.simulador.datos;
 
 import java.io.Serializable;
 import java.sql.DatabaseMetaData;
@@ -14,23 +14,24 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * Acceso a datos para MySQL (antes Datos.AccesoDatos).
  *
  * @author felipe
  */
-public class AccesoDatos implements Serializable {
+public class AccesoDatosMySQL implements Serializable {
 
     private static String sUrl = null;
     private static String sUsr = null;
     private static String sPwd = null;
     private java.sql.Connection oConexion;
 
-    public AccesoDatos() throws Exception {
+    public AccesoDatosMySQL() throws Exception {
         sUrl = "jdbc:mysql://localhost/TPCE";
         sUsr = "root";
         sPwd = "1122";
     }
-    
-    public AccesoDatos(String url, String nombd, String usr, String pwd) throws Exception {
+
+    public AccesoDatosMySQL(String url, String nombd, String usr, String pwd) throws Exception {
         sUrl = "jdbc:mysql://"+url+"/"+nombd+"?autoReconnect=true&useSSL=false&serverTimezone=UTC";//"jdbc:mysql://localhost/Master";
         sUsr = usr;//"root";
         sPwd = pwd;//"sunny_4teamo";
@@ -173,7 +174,7 @@ public class AccesoDatos implements Serializable {
                     default:
                         String str = "" + rset.getString(i);
                         vrsettmp.add(str);
-                } //switch  
+                } //switch
             }  //for
             vrset.add(vrsettmp);
         } //while
@@ -183,7 +184,7 @@ public class AccesoDatos implements Serializable {
     @Override
     public String toString() {
         String s = "";
-        s = "Class = AccesoDatos \n"
+        s = "Class = AccesoDatosMySQL \n"
                 + "    static sUrl  = " + sUrl + "\n"
                 + "    static sUsr = " + sUsr + "\n"
                 + "    static sPwd  = " + sPwd + "\n"
@@ -218,7 +219,7 @@ public class AccesoDatos implements Serializable {
                 ret.add(tablas.getString("TABLE_NAME"));
             }
         } catch (SQLException ex) {
-            Logger.getLogger(AccesoDatos.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(AccesoDatosMySQL.class.getName()).log(Level.SEVERE, null, ex);
         }
         return ret;
     }
@@ -231,7 +232,7 @@ public class AccesoDatos implements Serializable {
             while(atributos.next())
                 ret.add(atributos.getString("COLUMN_NAME")+":"+atributos.getString("TYPE_NAME"));
         } catch (SQLException ex) {
-            Logger.getLogger(AccesoDatos.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(AccesoDatosMySQL.class.getName()).log(Level.SEVERE, null, ex);
         }
         return ret;
     }

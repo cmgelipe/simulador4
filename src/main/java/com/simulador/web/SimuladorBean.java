@@ -1,6 +1,6 @@
-package JBS;
+package com.simulador.web;
 
-import Modelo.BD;
+import com.simulador.modelo.BD;
 import javax.enterprise.context.Dependent;
 import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
@@ -8,26 +8,27 @@ import javax.faces.bean.SessionScoped;
 import javax.faces.context.FacesContext;
 import java.io.Serializable;
 /**
+ * Managed bean "bd" (antes JBS.inicio).
  *
  * @author felipe
  */
 @ManagedBean(name = "bd")
 @SessionScoped
-public class inicio implements Serializable {
+public class SimuladorBean implements Serializable {
     private BD obj = new BD();
     private boolean listo=true;
     private boolean bconfig = false;
     private boolean bbotonfragmentar = false;
     private boolean bdatosincorrectos = false;
     private String arrOPERACIONES[];
-    public inicio() {
+    public SimuladorBean() {
     }
     public void sig(){
             obj.generar(arrOPERACIONES);
             listo=false;
         }
 //        return "segunda.xhtml";
-    
+
     public void sig2(){
         obj.generar(arrOPERACIONES);
         if(this.arrOPERACIONES[0] != null ){
@@ -129,7 +130,7 @@ public class inicio implements Serializable {
     public void revisarDatos() {
         this.bdatosincorrectos = false;
     }
-    
+
     /**
      * @return the arrOPERACIONES
      */
