@@ -29,4 +29,23 @@ public class GeneradorLogUtil {
     public static String generaNumero() {
         return "" + (int) (Math.random() * 25 + 1);
     }
+
+    /**
+     * Identificador de sesión/operación nuevo en cada llamada (antes: los
+     * generadores de log de Mongo reusaban siempre el mismo par de uuids
+     * fijos para todas las operaciones, lo que hacía trivialmente
+     * detectable que el log era simulado).
+     */
+    public static String nuevoUuid() {
+        return UUID.randomUUID().toString();
+    }
+
+    /**
+     * Entero aleatorio en [minimoInclusive, maximoInclusive], usado para
+     * variar métricas del log (durationMillis, numYields, reslen...) en
+     * vez de usar siempre la misma constante fija.
+     */
+    public static int enteroEntre(int minimoInclusive, int maximoInclusive) {
+        return minimoInclusive + (int) (Math.random() * (maximoInclusive - minimoInclusive + 1));
+    }
 }

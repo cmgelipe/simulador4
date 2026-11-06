@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 
 /**
  * Genera un log simulado de operaciones sobre MongoDB (antes
@@ -148,17 +149,26 @@ public class GeneradorLogMongoDB {
                                 valorString1 = extraerValorComoString(c_valor, atributoTipo.split(":")[0]);
                                 valorString2 = extraerValorComoString(c_valor2, atributoTipo.split(":")[0]);
                             }
+                            if (operacion0.compareTo("update") == 0 && tipo != 5) {
+                                // El nuevo valor de un update se genera de forma sintética
+                                // (igual que en los generadores de MySQL/PostgreSQL) en vez
+                                // de tomarlo de un segundo documento real muestreado al azar;
+                                // para arrays (tipo 5) se conserva la selección estructural
+                                // existente, ya que ahí "el nuevo valor" es otro elemento
+                                // del propio array, no un valor de otro documento.
+                                valorString2 = generarValorNuevoSintetico(tipo);
+                            }
                             if (operacion0.compareTo("find") == 0) {
                                 ret += construirLogFind(pid, ip, j + 1, nombd, tabla.getNombre(), campo,
-                                        atributoDocInterno1, operador0, valorString1, projection);
+                                        atributoDocInterno1, operador0, valorString1, projection, tipo);
                             } else if (operacion0.compareTo("update") == 0) {
                                 ret += construirLogUpdate(pid, ip, j + 1, nombd, tabla.getNombre(), campo,
-                                        atributoDocInterno1, atributoDocInterno2, operador0, valorString1, valorString2);
+                                        atributoDocInterno1, atributoDocInterno2, operador0, valorString1, valorString2, tipo);
                             } else if (operacion0.compareTo("delete") == 0) {
                                 ret += construirLogDelete(pid, ip, j + 1, nombd, tabla.getNombre(), campo,
-                                        atributoDocInterno1, operador0, valorString1);
+                                        atributoDocInterno1, operador0, valorString1, tipo);
                             } else if (operacion0.compareTo("insert") == 0) {
-                                ret += construirLogInsert(pid, ip, j + 1, nombd, tabla.getNombre(), campo, valorString1);
+                                ret += construirLogInsert(pid, ip, j + 1, nombd, tabla.getNombre(), campo, valorString1, tipo);
                             }
 
                         }
@@ -210,17 +220,21 @@ public class GeneradorLogMongoDB {
      * valor venía de un subdocumento de un array y otro para cuando no).
      */
     private String construirLogFind(String pid, String ip, int conexion, String nombd, String tabla,
-            String campo, String atributoDocInterno, String operador0, String valorString1, String projection) {
+            String campo, String atributoDocInterno, String operador0, String valorString1, String projection, int tipo) {
         String campoFiltro = atributoDocInterno != null ? campo + "." + atributoDocInterno : campo;
+        String valorFiltro = formatoValorJson(valorString1, tipo);
+        int numYields = GeneradorLogUtil.enteroEntre(0, 2);
+        int reslen = GeneradorLogUtil.enteroEntre(800, 5000);
+        int durationMillis = GeneradorLogUtil.enteroEntre(5, 120);
         return "{\"t\":{\"$date\":\""+ GeneradorLogUtil.fecha().trim() +"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
                 +", \"ctx\":\"conn"+conexion+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
                 +nombd + "." + tabla+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"find\":\""
-                +tabla+"\",\"filter\":{\"" + campoFiltro + "\": {" + operador0 + ":\"" + valorString1
-                + "\"} },\"projection\":{"+projection+"},\"lsid\":{\"id\":{\"$uuid\":\"60e637fc-f267-4840-993c-a3be0d6851ea\"}},\"$db\":\""
-                +nombd+"\"},\"planSummary\":\"COLLSCAN\",\"keysExamined\":0,\"docsExamined\":77,\"cursorExhausted\":true,\"numYields\":0,\"nreturned\":"
-                + "1870,\"queryHash\":\"4C06B3EF\",\"planCacheKey\":\"4FDA4125\",\"reslen\":2882,\"locks\":{\"Global\":{\"acquireCount\":{\"r\":1}},\"Mutex\":"
+                +tabla+"\",\"filter\":{\"" + campoFiltro + "\": {" + operador0 + ":" + valorFiltro
+                + "} },\"projection\":{"+projection+"},\"lsid\":{\"id\":{\"$uuid\":\""+GeneradorLogUtil.nuevoUuid()+"\"}},\"$db\":\""
+                +nombd+"\"},\"planSummary\":\"COLLSCAN\",\"keysExamined\":0,\"docsExamined\":77,\"cursorExhausted\":true,\"numYields\":"+numYields+",\"nreturned\":"
+                + "1870,\"queryHash\":\"4C06B3EF\",\"planCacheKey\":\"4FDA4125\",\"reslen\":"+reslen+",\"locks\":{\"Global\":{\"acquireCount\":{\"r\":1}},\"Mutex\":"
                 + "{\"acquireCount\":{\"r\":1}}},\"storage\":{\"data\":{\"bytesRead\":27422,\"timeReadingMicros\":105}},\"remote\":"
-                + "\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":36}}\n";
+                + "\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":"+durationMillis+"}}\n";
     }
 
     /**
@@ -231,20 +245,25 @@ public class GeneradorLogMongoDB {
      */
     private String construirLogUpdate(String pid, String ip, int conexion, String nombd, String tabla,
             String campo, String atributoDocInterno1, String atributoDocInterno2, String operador0,
-            String valorString1, String valorString2) {
+            String valorString1, String valorString2, int tipo) {
         String campoFiltro = atributoDocInterno1 != null ? campo + "." + atributoDocInterno1 : campo;
         String campoSet = atributoDocInterno2 != null ? campo + "." + atributoDocInterno2 : campo;
+        String valorFiltro = formatoValorJson(valorString1, tipo);
+        String valorNuevo = formatoValorJson(valorString2, tipo);
+        int numYields = GeneradorLogUtil.enteroEntre(0, 3);
+        int reslen = GeneradorLogUtil.enteroEntre(40, 150);
+        int durationMillis = GeneradorLogUtil.enteroEntre(5, 60);
         return "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
               +",\"ctx\":\"conn"+conexion+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
               +nombd + "." + tabla+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"update\":\""
               +tabla+"\",\"updates\":[{\"q\":{\""+campoFiltro
-              +"\":{"+operador0+":\""+valorString1+"\"}},\"u\":{\"$set\":{\""+ campoSet +"\":\""
-              +valorString2+"\"}},\"multi\":true}],\"nModified\":1,\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
-              + "\"$db\":\""+nombd+"\"},\"numYields\":1,\"reslen\":60,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
+              +"\":{"+operador0+":"+valorFiltro+"}},\"u\":{\"$set\":{\""+ campoSet +"\":"
+              +valorNuevo+"}},\"multi\":true}],\"nModified\":1,\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\""+GeneradorLogUtil.nuevoUuid()+"\"}},"
+              + "\"$db\":\""+nombd+"\"},\"numYields\":"+numYields+",\"reslen\":"+reslen+",\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":2}},"
               + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":3}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":2}},\"Database\":"
               + "{\"acquireCount\":{\"w\":2}},\"Collection\":{\"acquireCount\":{\"w\":2}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
               + "{\"acquireCount\":2,\"timeAcquiringMicros\":6},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
-              + "\"durationMillis\":28}}\n";
+              + "\"durationMillis\":"+durationMillis+"}}\n";
     }
 
     /**
@@ -252,36 +271,74 @@ public class GeneradorLogMongoDB {
      * bloques casi idénticos duplicados).
      */
     private String construirLogDelete(String pid, String ip, int conexion, String nombd, String tabla,
-            String campo, String atributoDocInterno, String operador0, String valorString1) {
+            String campo, String atributoDocInterno, String operador0, String valorString1, int tipo) {
         String campoFiltro = atributoDocInterno != null ? campo + "." + atributoDocInterno : campo;
+        String valorFiltro = formatoValorJson(valorString1, tipo);
+        int numYields = GeneradorLogUtil.enteroEntre(0, 4);
+        int reslen = GeneradorLogUtil.enteroEntre(30, 100);
+        int durationMillis = GeneradorLogUtil.enteroEntre(20, 400);
         return "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
                 +",\"ctx\":\"conn"+conexion+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
                 +nombd + "." + tabla+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"delete\":\""
                 +tabla+"\",\"deletes\":[{\"q\":{\""+campoFiltro
-                +"\":{"+ operador0 +":\""+valorString1+"\"}},\"limit\":0}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},"
-                + "\"$db\":\""+nombd+"\"},\"numYields\":2,\"reslen\":45,\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":3}},"
+                +"\":{"+ operador0 +":"+valorFiltro+"}},\"limit\":0}],\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\""+GeneradorLogUtil.nuevoUuid()+"\"}},"
+                + "\"$db\":\""+nombd+"\"},\"numYields\":"+numYields+",\"reslen\":"+reslen+",\"locks\":{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":3}},"
                 + "\"ReplicationStateTransition\":{\"acquireCount\":{\"w\":4}},\"Global\":{\"acquireCount\":{\"r\":1,\"w\":3}},\"Database\":"
                 + "{\"acquireCount\":{\"w\":3}},\"Collection\":{\"acquireCount\":{\"w\":3}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
                 + "{\"acquireCount\":3,\"timeAcquiringMicros\":13},\"storage\":{},\"remote\":\""+ip+"\",\"protocol\":\"op_msg\","
-                + "\"durationMillis\":306}}\n";
+                + "\"durationMillis\":"+durationMillis+"}}\n";
     }
 
     /**
      * Construye la línea de log de una operación "insert".
      */
     private String construirLogInsert(String pid, String ip, int conexion, String nombd, String tabla,
-            String campo, String valorString1) {
+            String campo, String valorString1, int tipo) {
+        String valorDocumento = formatoValorJson(valorString1, tipo);
+        int numYields = GeneradorLogUtil.enteroEntre(0, 2);
+        int reslen = GeneradorLogUtil.enteroEntre(30, 100);
+        int durationMillis = GeneradorLogUtil.enteroEntre(10, 250);
         return "{\"t\":{\"$date\":\""+GeneradorLogUtil.fecha().trim()+"\"},\"s\":\"I\",  \"c\":\"COMMAND\",  \"id\":"+pid
                 +",\"ctx\":\"conn"+conexion+"\",\"msg\":\"Slow query\",\"attr\":{\"type\":\"command\",\"ns\":\""
                 +nombd+"."+tabla+"\",\"appName\":\"mongosh 1.1.9\",\"command\":{\"insert\":\""
-                +tabla+"\",\"documents\":[{\""+campo+"\":\""+valorString1+"\"}],"
-                + "\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\"9e8b0ba3-b575-4d29-bc16-52ab6851daab\"}},\"$db\":\""
-                +nombd+"\"},\"ninserted\":1,\"keysInserted\":1,\"numYields\":0,\"reslen\":45,\"locks\":"
+                +tabla+"\",\"documents\":[{\""+campo+"\":"+valorDocumento+"}],"
+                + "\"ordered\":true,\"lsid\":{\"id\":{\"$uuid\":\""+GeneradorLogUtil.nuevoUuid()+"\"}},\"$db\":\""
+                +nombd+"\"},\"ninserted\":1,\"keysInserted\":1,\"numYields\":"+numYields+",\"reslen\":"+reslen+",\"locks\":"
                 + "{\"ParallelBatchWriterMode\":{\"acquireCount\":{\"r\":1}},\"ReplicationStateTransition\":"
                 + "{\"acquireCount\":{\"w\":1}},\"Global\":{\"acquireCount\":{\"w\":1}},\"Database\":{\"acquireCount\":"
                 + "{\"w\":1}},\"Collection\":{\"acquireCount\":{\"w\":1}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
                 + "{\"acquireCount\":1,\"timeAcquiringMicros\":6},\"storage\":{\"data\":{\"bytesRead\":1114,\"timeReadingMicros\":34}},"
-                + "\"remote\":\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":205}}\n";
+                + "\"remote\":\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":"+durationMillis+"}}\n";
+    }
+
+    /**
+     * Genera un valor sintético para el "nuevo valor" de un update, en vez
+     * de tomarlo de un segundo documento real muestreado al azar (igual
+     * criterio que usan los generadores de MySQL/PostgreSQL con
+     * generaCadena()/generaNumero()).
+     */
+    private String generarValorNuevoSintetico(int tipo) {
+        switch (tipo) {
+            case 1: // numérico (int/long/double/decimal)
+                return GeneradorLogUtil.generaNumero();
+            case 2: // fecha
+                return GeneradorLogUtil.fecha().trim();
+            case 4: // ObjectId
+                return new ObjectId().toString();
+            default: // string, bool, null, object
+                return GeneradorLogUtil.generaCadena();
+        }
+    }
+
+    /**
+     * Da formato JSON a un valor según su categoría de tipo: los
+     * numéricos van sin comillas (antes: todo se envolvía en comillas sin
+     * importar el tipo, lo que generaba filtros/valores incorrectos como
+     * {"edad": {"$gt": "30"}} en vez de {"edad": {"$gt": 30}}).
+     */
+    private String formatoValorJson(String valor, int tipo) {
+        boolean esNumerico = tipo == 1;
+        return esNumerico ? valor : "\"" + valor + "\"";
     }
 
     /**
