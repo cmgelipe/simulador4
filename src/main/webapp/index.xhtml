@@ -49,7 +49,7 @@
                         <p:selectOneMenu id="tb" value="#{bd.obj.tabla.nombre}" rendered="true">
                             <f:selectItems value="#{bd.obj.tablas}"/>
                         </p:selectOneMenu>
-                        <h:outputText value="Número de consultas por sitio" />
+                        <h:outputText value="Número de consultas (por sitio en MySQL/PostgreSQL; total a repartir entre sitios en MongoDB)" />
                         <p:inputNumber decimalPlaces="0" value="#{bd.obj.NConsultas}" />
                         <h:outputText value="Número de sitios" />
                         <p:inputNumber decimalPlaces="0" value="#{bd.obj.NSitios}" />

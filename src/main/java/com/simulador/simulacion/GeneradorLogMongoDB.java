@@ -24,6 +24,11 @@ public class GeneradorLogMongoDB {
 
     private final HashMap<Integer, Integer> ocupaciones = new HashMap<>();
 
+    /**
+     * @param nConsultas total exacto de operaciones a repartir entre los
+     * nSitios sitios (antes: cantidad fija POR sitio, generando siempre
+     * exactamente el mismo número de operaciones en cada uno).
+     */
     public String generar(String dirbd, String nombd, String usubd, String passbd,
             Tabla tabla, int nSitios, int nConsultas, String[] arr, ArrayList<String> evitados) {
         String ret = "";
@@ -40,11 +45,15 @@ public class GeneradorLogMongoDB {
                 // nSitios*nConsultas iteraciones.
                 MongoCollection<Document> colec = accexternomongo.getMongoClient().getDatabase(nombd).getCollection(tabla.getNombre());
                 double res = (double) colec.countDocuments();
+                // Reparto desigual del total de operaciones entre los sitios, en vez
+                // de exactamente nConsultas por cada uno: la actividad real no suele
+                // distribuirse de forma pareja entre sitios.
+                int[] operacionesPorSitio = distribuirOperaciones(nSitios, nConsultas);
                 for (int j = 0; j < nSitios; j++) {
                     String ip = ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + "." + ((int) (Math.random() * 255)) + ":" + ((int) (Math.random() * 90)) + "" + ((int) (Math.random() * 900));
                     String pid = ""+(int) ((Math.random() * 8001) + 1000);
                     consultaMongo:
-                    for (int i = 0; i < (nConsultas); i++) {
+                    for (int i = 0; i < operacionesPorSitio[j]; i++) {
                         String projection=atributosProjectionMongoDB(atributos);
                         int numeroA = (int) (Math.random() * atributos.size());
                         String atributoTipo = atributos.get(numeroA);
@@ -149,7 +158,14 @@ public class GeneradorLogMongoDB {
                                 valorString1 = extraerValorComoString(c_valor, atributoTipo.split(":")[0]);
                                 valorString2 = extraerValorComoString(c_valor2, atributoTipo.split(":")[0]);
                             }
-                            if (operacion0.compareTo("update") == 0 && tipo != 5) {
+                            if (operacion0.compareTo("insert") == 0 && tipo != 5) {
+                                // El valor insertado se genera de forma sintética para
+                                // garantizar que no coincide con ningún valor ya existente
+                                // en la colección real (en particular, si el atributo
+                                // elegido fuera el propio _id, no se duplicaría el de un
+                                // documento real: new ObjectId() es prácticamente único).
+                                valorString1 = generarValorNuevoSintetico(tipo);
+                            } else if (operacion0.compareTo("update") == 0 && tipo != 5) {
                                 // El nuevo valor de un update se genera de forma sintética
                                 // (igual que en los generadores de MySQL/PostgreSQL) en vez
                                 // de tomarlo de un segundo documento real muestreado al azar;
@@ -309,6 +325,36 @@ public class GeneradorLogMongoDB {
                 + "{\"w\":1}},\"Collection\":{\"acquireCount\":{\"w\":1}},\"Mutex\":{\"acquireCount\":{\"r\":1}}},\"flowControl\":"
                 + "{\"acquireCount\":1,\"timeAcquiringMicros\":6},\"storage\":{\"data\":{\"bytesRead\":1114,\"timeReadingMicros\":34}},"
                 + "\"remote\":\""+ip+"\",\"protocol\":\"op_msg\",\"durationMillis\":"+durationMillis+"}}\n";
+    }
+
+    /**
+     * Reparte el total de operaciones entre los sitios de forma desigual,
+     * usando cortes aleatorios sobre [0, total] (técnica "stars and bars"):
+     * se eligen nSitios-1 puntos de corte, se ordenan, y la distancia entre
+     * cortes consecutivos es el tamaño de cada sitio. Antes cada sitio
+     * recibía siempre exactamente nConsultas operaciones.
+     */
+    private int[] distribuirOperaciones(int nSitios, int totalOperaciones) {
+        int[] resultado = new int[Math.max(nSitios, 0)];
+        if (nSitios <= 0 || totalOperaciones <= 0) {
+            return resultado;
+        }
+        if (nSitios == 1) {
+            resultado[0] = totalOperaciones;
+            return resultado;
+        }
+        int[] cortes = new int[nSitios - 1];
+        for (int k = 0; k < cortes.length; k++) {
+            cortes[k] = (int) (Math.random() * (totalOperaciones + 1));
+        }
+        Arrays.sort(cortes);
+        int anterior = 0;
+        for (int j = 0; j < nSitios; j++) {
+            int actual = (j < cortes.length) ? cortes[j] : totalOperaciones;
+            resultado[j] = actual - anterior;
+            anterior = actual;
+        }
+        return resultado;
     }
 
     /**
