@@ -3,7 +3,7 @@ package com.simulador.modelo;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import javax.faces.model.SelectItem;
+import jakarta.faces.model.SelectItem;
 
 /**
  *

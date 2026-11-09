@@ -9,17 +9,17 @@ import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.RequestScoped;
-import javax.faces.context.FacesContext;
-import javax.servlet.ServletContext;
+import jakarta.enterprise.context.RequestScoped;
+import jakarta.faces.context.FacesContext;
+import jakarta.inject.Named;
+import jakarta.servlet.ServletContext;
 import org.primefaces.model.DefaultStreamedContent;
 import org.primefaces.model.StreamedContent;
 
 /**
  * Managed bean "arch" (antes JBS.BDJB).
  */
-@ManagedBean(name = "arch")
+@Named("arch")
 @RequestScoped
 public class DescargaLogBean implements Serializable {
 
@@ -40,7 +40,11 @@ public class DescargaLogBean implements Serializable {
             RandomAccessFile acc = new RandomAccessFile(ruta + "resources\\temṕ.log", "rw");
             acc.writeBytes(cadenaArchivo);
             InputStream stream = new FileInputStream(ruta + "resources\\temṕ.log");//((ServletContext) FacesContext.getCurrentInstance().getExternalContext().getContext()).getResourceAsStream(f.getAbsolutePath());
-            file = new DefaultStreamedContent(stream, "text/plain", "log.log");
+            file = DefaultStreamedContent.builder()
+                    .contentType("text/plain")
+                    .name("log.log")
+                    .stream(() -> stream)
+                    .build();
 
         } catch (FileNotFoundException ex) {
             ex.printStackTrace();
