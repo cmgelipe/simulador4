@@ -35,6 +35,7 @@ public class BD implements Serializable {
     private List<SelectItem> tablas;
     private Tabla tabla = new Tabla();
     private HashMap<String, String> NombreIp;
+    private String ultimoTipoConfigurado;
 
     private final GeneradorLogMySQL generadorLogMySQL = new GeneradorLogMySQL();
     private final GeneradorLogPostgreSQL generadorLogPostgreSQL = new GeneradorLogPostgreSQL();
@@ -202,6 +203,50 @@ public class BD implements Serializable {
      */
     public void setPassbd(String passbd) {
         this.passbd = passbd;
+    }
+
+    /**
+     * Limpia los datos de conexión/tabla al cambiar de gestor, para que no
+     * queden valores de un gestor anterior (p.ej. la precarga de MongoDB).
+     */
+    public void resetDatosConexion() {
+        dirbd = null;
+        nombd = null;
+        usubd = "";
+        passbd = "";
+        nSitios = 2;
+        nConsultas = 3;
+        tabla = new Tabla();
+        tablas = null;
+    }
+
+    /**
+     * Precarga los datos de conexión conocidos para la base de datos de
+     * prueba de MongoDB y consulta sus tablas/colecciones.
+     */
+    public void precargarMongoDB() {
+        dirbd = "127.0.0.1:27017";
+        nombd = "pancreas_ct_tcia";
+        usubd = "";
+        passbd = "";
+        nSitios = 3;
+        nConsultas = 300;
+        tabla.setNombre("instances");
+        onTablas();
+    }
+
+    /**
+     * @return the ultimoTipoConfigurado
+     */
+    public String getUltimoTipoConfigurado() {
+        return ultimoTipoConfigurado;
+    }
+
+    /**
+     * @param ultimoTipoConfigurado the ultimoTipoConfigurado to set
+     */
+    public void setUltimoTipoConfigurado(String ultimoTipoConfigurado) {
+        this.ultimoTipoConfigurado = ultimoTipoConfigurado;
     }
 
     public void onTablas() {

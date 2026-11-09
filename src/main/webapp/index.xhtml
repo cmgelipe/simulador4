@@ -6,28 +6,65 @@
       xmlns:f="http://xmlns.jcp.org/jsf/core">
     <h:head>
         <title>SimulQuery</title>
+        <h:outputStylesheet name="css/header.css" />
+        <h:outputStylesheet name="css/db-selector.css" />
+        <h:outputStylesheet name="css/dialog.css" />
+        <h:outputScript name="js/header.js" />
     </h:head>
     <h:body style="background-color: #2d354b">
+        <div id="appHeader" class="app-header">
+            <span class="app-logo">
+                <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/></svg>
+            </span>
+            <span class="app-title">SimulQuery</span>
+        </div>
         <h:form id="f1">
-            <br /><br /><br /><br /><br /><br />
+            <br /><br /><br />
             <div style="text-align: center">
-                <h1 style="color:antiquewhite">SimulQUERY</h1>
-                <p:selectOneMenu value="#{bd.obj.tipoBD}">
-                    <f:selectItem itemLabel="Selecciona tu gestor" itemValue="" noSelectionOption="true" />
-                    <f:selectItem itemLabel="MySQL" itemValue="a" />
-                    <f:selectItem itemLabel="Postgres-XL" itemValue="b" />
-                    <f:selectItem itemLabel="PostgreSQL" itemValue="c" />
-                    <f:selectItem itemLabel="MongoDB" itemValue="d" />
-                </p:selectOneMenu><br/>
+                <h:panelGroup id="dbgrid" layout="block" styleClass="db-selector">
+                    <p:commandLink actionListener="#{bd.obj.setTipoBD('a')}" update=":f1:dbgrid :f1:connBtn"
+                                   styleClass="db-card #{bd.obj.tipoBD == 'a' ? 'db-card-selected' : ''}" style="--db-color:#E48E00">
+                        <span class="db-check">✓</span>
+                        <span class="db-icon">
+                            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/></svg>
+                        </span>
+                        <span class="db-name">MySQL</span>
+                    </p:commandLink>
+                    <p:commandLink actionListener="#{bd.obj.setTipoBD('b')}" update=":f1:dbgrid :f1:connBtn"
+                                   styleClass="db-card #{bd.obj.tipoBD == 'b' ? 'db-card-selected' : ''}" style="--db-color:#2C8FA8">
+                        <span class="db-check">✓</span>
+                        <span class="db-badge">XL</span>
+                        <span class="db-icon">
+                            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/></svg>
+                        </span>
+                        <span class="db-name">Postgres-XL</span>
+                    </p:commandLink>
+                    <p:commandLink actionListener="#{bd.obj.setTipoBD('c')}" update=":f1:dbgrid :f1:connBtn"
+                                   styleClass="db-card #{bd.obj.tipoBD == 'c' ? 'db-card-selected' : ''}" style="--db-color:#336791">
+                        <span class="db-check">✓</span>
+                        <span class="db-icon">
+                            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/></svg>
+                        </span>
+                        <span class="db-name">PostgreSQL</span>
+                    </p:commandLink>
+                    <p:commandLink actionListener="#{bd.obj.setTipoBD('d')}" update=":f1:dbgrid :f1:connBtn"
+                                   styleClass="db-card #{bd.obj.tipoBD == 'd' ? 'db-card-selected' : ''}" style="--db-color:#4DB33D">
+                        <span class="db-check">✓</span>
+                        <span class="db-icon">
+                            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/></svg>
+                        </span>
+                        <span class="db-name">MongoDB</span>
+                    </p:commandLink>
+                </h:panelGroup>
                 <br />
-                <p:commandButton ajax="false" value="Conexión" action="#{bd.configuracion()}" update="f2:d1" />
+                <p:commandButton id="connBtn" ajax="false" value="Conexión" action="#{bd.configuracion()}" update="f2:d1" disabled="#{empty bd.obj.tipoBD}" />
             </div>
         </h:form>
             <h:form id="f2">
                 <p:growl id="mensajes"  showDetail="true" />
                 <h:inputHidden value="#{bd.obj.tipoBD}" />
-                <p:dialog header="Configurar conexión" id="d1" visible="#{bd.bconfig}"  closable="false" >
-                    <p:panelGrid columns="2"> 
+                <p:dialog header="Configurar conexión" id="d1" styleClass="app-dialog" visible="#{bd.bconfig}"  closable="false" >
+                    <p:panelGrid columns="2">
 
                         <p:outputLabel value="Dirección de la base de datos" />
                         <p:inputText value="#{bd.obj.dirbd}" placeholder="#.#.#.#:#" required="true">
@@ -54,23 +91,25 @@
                         <h:outputText value="Número de sitios" />
                         <p:inputNumber decimalPlaces="0" value="#{bd.obj.NSitios}" />
                         <h:outputText value="Tipo de consultas" />
-                        <p:selectManyCheckbox value="#{bd.arrOPERACIONES}">
+                        <p:selectManyCheckbox layout="grid" columns="2" value="#{bd.arrOPERACIONES}">
                             <f:selectItem itemLabel="Selección" itemValue="a" />
                             <f:selectItem itemLabel="Actualización" itemValue="b" />
                             <f:selectItem itemLabel="Eliminación" itemValue="c" />
                             <f:selectItem itemLabel="Inserción" itemValue="d" />
                         </p:selectManyCheckbox>
-                    </p:panelGrid>               
-                    <p:commandButton value="Probar conexión" action="#{bd.probarConexion()}" update="f2:g f2:dl3 f2:mensajes"/>
-                    <p:commandButton value="Cancelar"  action="#{bd.cancelarConf()}" update="f2:d1"/>
-                    <p:commandButton id="g" disabled="#{!bd.bbotonfragmentar}" value="Generar log" action="#{bd.sig2()}" update="mensajes b"  />
-                    <p:commandButton ajax="false" value="Descargar log" disabled="#{bd.listo}" id="b">
-                        <p:fileDownload value="#{arch.file}" />
-                    </p:commandButton>
+                    </p:panelGrid>
+                    <f:facet name="footer">
+                        <p:commandButton value="Probar conexión" action="#{bd.probarConexion()}" update="f2:g f2:dl3 f2:mensajes"/>
+                        <p:commandButton value="Cancelar" process="@this" action="#{bd.cancelarConf()}" update="f2:d1"/>
+                        <p:commandButton id="g" disabled="#{!bd.bbotonfragmentar}" value="Generar log" action="#{bd.sig2()}" update="mensajes b"  />
+                        <p:commandButton ajax="false" value="Descargar log" disabled="#{bd.listo}" id="b">
+                            <p:fileDownload value="#{arch.file}" />
+                        </p:commandButton>
+                    </f:facet>
                 </p:dialog>
                 <p:dialog id="dl3" header="Información" visible="#{bd.bdatosincorrectos}" modal="true">
                     <h:outputText value="La conexión no fue exitosa. Revise sus datos."/><br /><br />
-                    <p:commandButton value="Revisar" action="#{bd.revisarDatos()}" update="f2:dl3" />
+                    <p:commandButton value="Revisar" process="@this" action="#{bd.revisarDatos()}" update="f2:dl3" />
                 </p:dialog>
                 <p:ajaxStatus onstart="PF('statusDialog').show()" onsuccess="PF('statusDialog').hide()"/>
 

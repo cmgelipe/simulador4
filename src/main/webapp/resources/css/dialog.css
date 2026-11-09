@@ -1,0 +1,31 @@
+.ui-dialog.app-dialog {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ui-dialog.app-dialog .ui-dialog-titlebar {
+    background: linear-gradient(135deg, #E48E00, #336791 55%, #4DB33D);
+    padding: 1rem 1.5rem;
+}
+
+.ui-dialog.app-dialog .ui-dialog-title {
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.ui-dialog.app-dialog .ui-dialog-titlebar-icon {
+    color: #fff;
+}
+
+.ui-dialog.app-dialog .ui-dialog-buttonpane {
+    text-align: right;
+    background: #19233350;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    margin: 0;
+    padding: 0.75rem 1.5rem;
+}
+
+.ui-dialog.app-dialog .ui-selectmanycheckbox td {
+    padding: 0.3rem 1.2rem 0.3rem 0;
+}

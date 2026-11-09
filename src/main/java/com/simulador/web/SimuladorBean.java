@@ -66,6 +66,16 @@ public class SimuladorBean implements Serializable {
         this.listo = listo;
     }
     public void configuracion() {
+        if (!obj.getTipoBD().equals(obj.getUltimoTipoConfigurado())) {
+            obj.resetDatosConexion();
+            if ("d".equals(obj.getTipoBD())) {
+                obj.precargarMongoDB();
+                arrOPERACIONES = new String[]{"a", "b", "c", "d"};
+            } else {
+                arrOPERACIONES = null;
+            }
+            obj.setUltimoTipoConfigurado(obj.getTipoBD());
+        }
         setBconfig(true);
 
     }

@@ -1,0 +1,54 @@
+html, body {
+    margin: 0;
+    padding-top: 60px;
+}
+
+.app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 24px;
+    background: #2d354b;
+    z-index: 1000;
+    transition: box-shadow 0.2s ease;
+}
+
+.app-header.scrolled {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.app-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #E48E00, #336791 55%, #4DB33D);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.app-logo svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.app-title {
+    color: antiquewhite;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    margin: 0;
+}
